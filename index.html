@@ -1,0 +1,5949 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flow Diagram Builder</title>
+  <!-- <link rel="stylesheet" href="style.css"> -->
+  <style>
+    :root {
+      --bg: #f4f4f5;
+      --surface: #ffffff;
+      --border: #e4e4e7;
+      --border-md: #d1d5db;
+      --accent: #6366f1;
+      --accent-h: #4f46e5;
+      --danger: #ef4444;
+      --text-1: #18181b;
+      --text-2: #52525b;
+      --text-3: #a1a1aa;
+      --canvas-bg: #f9fafb;
+      --canvas-dot: #d1d5db;
+    }
+
+    :root.dark {
+      --bg: #18181b;
+      --surface: #27272a;
+      --border: #3f3f46;
+      --border-md: #52525b;
+      --text-1: #f4f4f5;
+      --text-2: #d4d4d8;
+      --text-3: #71717a;
+      --canvas-bg: #0f0f12;
+      --canvas-dot: #2a2a2e;
+    }
+
+    :root {
+      --node-shadow: 0 1px 3px rgba(0, 0, 0, 0.07), 0 1px 2px rgba(0, 0, 0, 0.05);
+      --node-shadow-sel: 0 0 0 2px var(--accent);
+      --radius-sm: 4px;
+      --radius: 6px;
+      --radius-lg: 10px;
+      --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text-1);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      font-size: 13px;
+    }
+
+    /* ── Toolbar ── */
+    #toolbar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 0 12px;
+      height: 44px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    #toolbar h1 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-1);
+      letter-spacing: -0.2px;
+      margin-right: 8px;
+      white-space: nowrap;
+    }
+
+    .toolbar-sep {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      margin: 0 6px;
+      flex-shrink: 0;
+    }
+
+    .toolbar-btn {
+      padding: 5px 10px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-2);
+      font-size: 12px;
+      font-family: var(--font);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.12s, color 0.12s;
+      line-height: 1;
+    }
+
+    .toolbar-btn:hover {
+      background: var(--bg);
+      color: var(--text-1);
+    }
+
+    .toolbar-btn:active {
+      background: var(--border);
+    }
+
+    #zoom-display {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-3);
+      min-width: 36px;
+      text-align: center;
+      user-select: none;
+    }
+
+    .toolbar-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .toolbar-btn:disabled:hover {
+      background: transparent;
+      color: var(--text-2);
+    }
+
+    .toolbar-btn.danger {
+      color: var(--danger);
+    }
+
+    .toolbar-btn.danger:hover {
+      background: #fef2f2;
+      color: var(--danger);
+    }
+
+    .toolbar-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .toolbar-btn.active:hover {
+      background: var(--accent-h);
+      color: #fff;
+    }
+
+    /* ── Main layout ── */
+    #app {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 168px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 14px 8px;
+      overflow-y: auto;
+    }
+
+    #sidebar h2 {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      color: var(--text-3);
+      margin-bottom: 8px;
+      padding: 0 6px;
+    }
+
+    .palette-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      cursor: grab;
+      margin-bottom: 2px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-2);
+      user-select: none;
+      transition: background 0.1s, border-color 0.1s;
+    }
+
+    .palette-item:hover {
+      background: var(--bg);
+      border-color: var(--border);
+      color: var(--text-1);
+    }
+
+    .palette-item:active {
+      cursor: grabbing;
+    }
+
+    .palette-key {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-3);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: ui-monospace, monospace;
+    }
+
+    .palette-preview {
+      width: 24px;
+      height: 16px;
+      border: 1.5px solid;
+      flex-shrink: 0;
+    }
+
+    .palette-preview {
+      border-width: 1px;
+    }
+
+    .palette-preview.start-end {
+      border-radius: 10px;
+      background: #dcfce7;
+      border-color: #86efac;
+    }
+
+    .palette-preview.process {
+      border-radius: 3px;
+      background: #dbeafe;
+      border-color: #93c5fd;
+    }
+
+    .palette-preview.decision {
+      transform: rotate(45deg) scale(0.72);
+      background: #fef9c3;
+      border-color: #fde047;
+      width: 16px;
+      height: 16px;
+    }
+
+    .palette-preview.note {
+      border-radius: 3px;
+      background: #fefce8;
+      border-color: #fde047;
+    }
+
+    .palette-preview.database {
+      border-radius: 0 0 3px 3px;
+      background: #f3e8ff;
+      border-color: #c084fc;
+      border-top: none;
+      position: relative;
+      overflow: visible;
+      margin-top: 5px;
+    }
+
+    .palette-preview.database::before {
+      content: '';
+      position: absolute;
+      top: -5px;
+      left: -2px;
+      right: -2px;
+      height: 10px;
+      background: #ede9fe;
+      border: 1px solid #c084fc;
+      border-radius: 50%;
+    }
+
+    .palette-preview.api {
+      border-radius: 3px;
+      background: #fff7ed;
+      border-color: #fb923c;
+    }
+
+    .palette-preview.queue {
+      border-radius: 2px;
+      background: #ccfbf1;
+      border-color: #2dd4bf;
+      transform: skewX(-10deg);
+    }
+
+    /* ── Canvas ── */
+    #canvas-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background-color: var(--canvas-bg);
+      background-image: radial-gradient(circle, var(--canvas-dot) 1px, transparent 1px);
+      background-size: 22px 22px;
+      cursor: grab;
+    }
+
+    #canvas-container.panning {
+      cursor: grabbing;
+    }
+
+    #canvas-container.space-held {
+      cursor: grab;
+    }
+
+    #canvas-world {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4000px;
+      height: 4000px;
+      transform-origin: 0 0;
+    }
+
+    #canvas-nodes {
+      position: absolute;
+      inset: 0;
+    }
+
+    #canvas-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    #canvas-svg path.connection-hit {
+      fill: none;
+      stroke: transparent;
+      stroke-width: 16;
+      pointer-events: stroke;
+      cursor: pointer;
+    }
+
+    #canvas-svg path.connection {
+      fill: none;
+      stroke: #94a3b8;
+      stroke-width: 1.5;
+      pointer-events: none;
+      cursor: pointer;
+      transition: stroke 0.12s;
+    }
+
+    #canvas-svg path.connection.hovered {
+      stroke: var(--danger);
+      stroke-width: 2.5;
+    }
+
+    #canvas-svg path.connection-hit:hover+path.connection {
+      stroke: var(--danger);
+      stroke-width: 2.5;
+    }
+
+    #canvas-svg path.connection.selected {
+      stroke: var(--danger);
+    }
+
+    #canvas-svg path.connection.connected-highlight {
+      stroke: var(--accent);
+      stroke-width: 2;
+    }
+
+    #canvas-svg path.connection.dimmed {
+      opacity: 0.25;
+    }
+
+    .conn-label {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 11px;
+      line-height: 1.3;
+      color: var(--text-1);
+      white-space: pre-wrap;
+      text-align: center;
+      max-width: 240px;
+      cursor: text;
+      pointer-events: all;
+      z-index: 12;
+      user-select: none;
+    }
+
+    .conn-label.empty {
+      display: none;
+    }
+
+    .conn-label-editor {
+      border: none;
+      outline: none;
+      background: transparent;
+      font: inherit;
+      line-height: inherit;
+      color: inherit;
+      width: 110px;
+      min-width: 60px;
+      padding: 0;
+      margin: 0;
+      text-align: center;
+      resize: none;
+      overflow: hidden;
+      display: block;
+    }
+
+    .node.connected-highlight {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    .node.dimmed {
+      opacity: 0.3;
+    }
+
+    .node--locked {
+      outline: 2px dashed rgba(99, 102, 241, 0.45);
+      outline-offset: 3px;
+      cursor: default;
+    }
+
+    .node--locked .resize-handle {
+      display: none !important;
+    }
+
+    .node--custom-color.node--start,
+    .node--custom-color.node--end,
+    .node--custom-color.node--process,
+    .node--custom-color.node--note,
+    .node--custom-color.node--api,
+    .node--custom-color.node--database {
+      background: var(--node-bg) !important;
+    }
+
+    .node--custom-color.node--decision::before,
+    .node--custom-color.node--queue::before {
+      background: var(--node-bg) !important;
+    }
+
+    .node--custom-color.node--database::before {
+      background: var(--node-bg) !important;
+      filter: brightness(0.95);
+    }
+
+    .search-bar {
+      position: fixed;
+      top: 52px;
+      right: 240px;
+      background: var(--surface);
+      border: 1px solid var(--border-md);
+      border-radius: var(--radius);
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      z-index: 100;
+    }
+
+    .search-bar input {
+      border: none;
+      outline: none;
+      font-size: 12px;
+      font-family: var(--font);
+      width: 200px;
+      padding: 2px 4px;
+    }
+
+    .search-count {
+      font-size: 11px;
+      color: var(--text-3);
+      font-variant-numeric: tabular-nums;
+      min-width: 44px;
+      text-align: right;
+    }
+
+    .field-group--inline {
+      flex-direction: row;
+      align-items: center;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-2);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkbox-label input {
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .color-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .color-row input[type="color"] {
+      width: 36px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid var(--border-md);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .align-guide {
+      position: absolute;
+      background: var(--accent);
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .align-guide.vert {
+      width: 1px;
+    }
+
+    .align-guide.horiz {
+      height: 1px;
+    }
+
+    #canvas-svg path.temp-connection {
+      fill: none;
+      stroke: #cbd5e0;
+      stroke-width: 1.5;
+      stroke-dasharray: 5 3;
+    }
+
+    /* ── Sequence badge ── */
+    .node-seq {
+      position: absolute;
+      top: -8px;
+      left: -8px;
+      width: 18px;
+      height: 18px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 9px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+      pointer-events: none;
+      user-select: none;
+      line-height: 1;
+      box-shadow: 0 1px 3px rgba(99, 102, 241, 0.4);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Nodes ── */
+    .node {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 10px 12px;
+      cursor: move;
+      user-select: none;
+      border: 1px solid;
+      border-radius: var(--radius);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+      transition: box-shadow 0.12s, border-color 0.12s;
+    }
+
+    .node.selected {
+      box-shadow: 0 0 0 2px var(--accent), 0 1px 4px rgba(15, 23, 42, 0.08);
+    }
+
+    .node--start,
+    .node--end {
+      border-radius: 9999px;
+      background: #dcfce7;
+      border-color: #86efac;
+    }
+
+    .node--process {
+      background: #dbeafe;
+      border-color: #93c5fd;
+    }
+
+    .node--decision {
+      border: none;
+      background: transparent;
+      overflow: visible;
+      box-shadow: none;
+    }
+
+    .node--decision::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: #fef9c3;
+      border: 1px solid #fde047;
+      clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+      z-index: 0;
+    }
+
+    .node--decision.selected::before {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    .node--note {
+      background: #fefce8;
+      border-color: #fde047;
+      border-radius: var(--radius-sm) 0 var(--radius-sm) var(--radius-sm);
+      align-items: flex-start;
+      padding: 10px 12px;
+    }
+
+    .node--note::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      right: -1px;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 12px 12px 0;
+      border-color: transparent var(--canvas-bg) transparent transparent;
+      z-index: 1;
+    }
+
+    /* Database — cylinder */
+    .node--database {
+      background: #f3e8ff;
+      border-color: #c084fc;
+      border-top: none;
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+      padding-top: 18px;
+      overflow: visible;
+    }
+
+    .node--database::before {
+      content: '';
+      position: absolute;
+      top: -9px;
+      left: -1px;
+      right: -1px;
+      height: 18px;
+      background: #ede9fe;
+      border: 1px solid #c084fc;
+      border-radius: 50%;
+      z-index: 1;
+    }
+
+    /* API Call — header band + sections */
+    .node--api {
+      background: #fff7ed;
+      border-color: #fb923c;
+      border-radius: var(--radius);
+      padding: 24px 12px 10px;
+      align-items: stretch;
+      justify-content: flex-start;
+      gap: 4px;
+    }
+
+    .node--api::before {
+      content: 'API';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 20px;
+      background: #ffedd5;
+      border-bottom: 1px solid #fb923c;
+      border-radius: var(--radius) var(--radius) 0 0;
+      font-size: 9px;
+      font-weight: 700;
+      color: #c2410c;
+      letter-spacing: 0.8px;
+      text-align: center;
+      line-height: 20px;
+      z-index: 1;
+    }
+
+    .node--api .node-label {
+      text-align: center;
+      padding: 0 4px;
+    }
+
+    .node--api .node-desc {
+      text-align: left;
+      padding: 0 2px;
+    }
+
+    .api-url {
+      font-size: 10px;
+      font-weight: 500;
+      color: #c2410c;
+      background: rgba(251, 146, 60, 0.12);
+      border-radius: 3px;
+      padding: 2px 6px;
+      word-break: break-all;
+      text-align: center;
+      width: 100%;
+      line-height: 1.4;
+      display: none;
+      font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    }
+
+    .api-url.visible {
+      display: block;
+    }
+
+    /* API sections */
+    .api-sections {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      margin-top: 4px;
+      gap: 0;
+      border-top: 1px solid rgba(251, 146, 60, 0.3);
+      padding-top: 6px;
+    }
+
+    .api-section {
+      padding: 2px 0;
+    }
+
+    .api-section+.api-section {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(251, 146, 60, 0.2);
+    }
+
+    .api-section-hd {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #c2410c;
+      margin-bottom: 3px;
+    }
+
+    .api-section-bd {
+      font-size: 10px;
+      color: var(--text-2);
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.45;
+      min-height: 14px;
+      font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    }
+
+    /* DB Server field on Database node */
+    .db-server {
+      font-size: 10px;
+      font-weight: 500;
+      color: #7c3aed;
+      background: rgba(192, 132, 252, 0.12);
+      border-radius: 3px;
+      padding: 2px 6px;
+      word-break: break-all;
+      text-align: center;
+      width: 100%;
+      font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+      line-height: 1.4;
+      position: relative;
+      z-index: 2;
+      display: none;
+    }
+
+    .db-server.visible {
+      display: block;
+    }
+
+    /* Queue — parallelogram */
+    .node--queue {
+      background: transparent;
+      border: none;
+      overflow: visible;
+      box-shadow: none;
+    }
+
+    .node--queue::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: #ccfbf1;
+      border: 1px solid #2dd4bf;
+      border-radius: var(--radius-sm);
+      transform: skewX(-12deg);
+      z-index: 0;
+      transition: box-shadow 0.12s;
+    }
+
+    .node--queue.selected::before {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    .node-label {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: -0.1px;
+      text-align: center;
+      color: var(--text-1);
+      word-break: break-word;
+      position: relative;
+      z-index: 1;
+      max-width: 100%;
+      padding: 0 4px;
+      cursor: pointer;
+      line-height: 1.35;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      justify-content: center;
+    }
+
+    .node-label-text {
+      cursor: text;
+    }
+
+    .node-label-text[contenteditable="true"] {
+      outline: none;
+    }
+
+    .node-label-caret {
+      display: inline-block;
+      font-size: 8px;
+      color: var(--text-3);
+      transition: transform 0.15s;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .node--collapsed .node-label-caret {
+      transform: rotate(-90deg);
+    }
+
+    .node-label:hover .node-label-caret {
+      color: var(--text-1);
+    }
+
+    .node-label[contenteditable="true"] {
+      outline: none;
+      user-select: text;
+      cursor: text;
+      min-width: 20px;
+    }
+
+    .node--decision .node-label {
+      position: relative;
+      z-index: 2;
+      padding: 0 30px;
+    }
+
+    .node--note .node-label {
+      text-align: left;
+      padding: 0;
+    }
+
+    /* ── Node description ── */
+    .node-desc {
+      font-size: 11px;
+      color: var(--text-2);
+      text-align: left;
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      min-height: 1.45em;
+      padding: 2px 4px;
+      line-height: 1.45;
+      cursor: text;
+      word-break: break-word;
+      overflow: hidden;
+      white-space: pre-wrap;
+      border-radius: 3px;
+      transition: background 0.12s;
+    }
+
+    .node-desc.is-empty::before {
+      content: 'Double-click to add note…';
+      color: var(--text-3);
+      font-style: italic;
+    }
+
+    .node-desc.is-empty:hover {
+      background: rgba(15, 23, 42, 0.03);
+    }
+
+    .node-desc.editing {
+      background: transparent;
+      outline: none;
+      cursor: text;
+      caret-color: var(--accent);
+    }
+
+    .node-desc.editing:hover {
+      background: transparent;
+    }
+
+    .node-desc.editing::before {
+      content: none;
+    }
+
+    .node-desc ul {
+      list-style: disc;
+      padding-left: 14px;
+      margin: 0;
+      text-align: left;
+    }
+
+    .node-desc li {
+      margin: 0;
+    }
+
+    .node-desc br:last-child {
+      display: none;
+    }
+
+    .node--decision .node-desc {
+      position: relative;
+      z-index: 2;
+      padding: 0 34px;
+    }
+
+    .node--note .node-desc {
+      text-align: left;
+      padding: 0;
+    }
+
+    .node--note .node-desc ul {
+      padding-left: 12px;
+    }
+
+    /* ── Inline notes editor ── */
+    .node-notes-editor {
+      width: 100%;
+      min-height: 40px;
+      padding: 6px 8px;
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-family: var(--font);
+      color: var(--text-1);
+      background: var(--surface);
+      resize: none;
+      outline: none;
+      overflow: hidden;
+      line-height: 1.5;
+      position: relative;
+      z-index: 5;
+      display: block;
+      cursor: text;
+      user-select: text;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+      box-sizing: border-box;
+      text-align: left;
+    }
+
+    .node-notes-editor::placeholder {
+      color: var(--text-3);
+    }
+
+    /* ── Accordion wrapper ── */
+    .node-extra {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: inherit;
+      gap: 2px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .node--collapsed .node-extra {
+      display: none;
+    }
+
+    .node-toggle-btn {
+      position: absolute;
+      bottom: -9px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 18px;
+      height: 18px;
+      background: var(--surface);
+      border: 1px solid var(--border-md);
+      border-radius: 50%;
+      padding: 0;
+      cursor: pointer;
+      color: var(--text-2);
+      font-size: 9px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font);
+      transition: all 0.12s;
+      user-select: none;
+      z-index: 6;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+      opacity: 0;
+    }
+
+    .node:hover .node-toggle-btn,
+    .node.selected .node-toggle-btn {
+      opacity: 1;
+    }
+
+    .node-toggle-btn:hover {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* ── Links on node ── */
+    .node-links {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      position: relative;
+      z-index: 3;
+      width: 100%;
+      margin-top: 2px;
+    }
+
+    .node--api .node-links {
+      align-items: flex-start;
+      margin-top: 4px;
+    }
+
+    .node--note .node-links {
+      align-items: flex-start;
+    }
+
+    .node-link {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      cursor: pointer;
+      pointer-events: all;
+      white-space: nowrap;
+      max-width: calc(100% - 8px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: color 0.1s;
+      line-height: 1.4;
+    }
+
+    .node-link:hover {
+      color: var(--accent-h);
+    }
+
+    /* ── Ports ── */
+    .port {
+      position: absolute;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 2px solid var(--accent);
+      opacity: 0;
+      cursor: crosshair;
+      z-index: 10;
+      transition: opacity 0.1s, transform 0.1s;
+    }
+
+    .node.selected .port,
+    .node.connecting-source .port {
+      opacity: 1;
+    }
+
+    /* While drawing or re-anchoring a connection, reveal every node's dots so
+       the user can aim at a specific one. */
+    #canvas-container.connecting-active .port {
+      opacity: 0.5;
+      pointer-events: all;
+    }
+    #canvas-container.connecting-active .port:hover {
+      opacity: 1;
+      background: var(--accent);
+    }
+
+    /* Draggable endpoint dots shown on a selected connection. */
+    .conn-endpoint {
+      position: absolute;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 0 2px var(--surface);
+      transform: translate(-50%, -50%);
+      cursor: grab;
+      z-index: 11;
+    }
+    .conn-endpoint:hover { background: var(--accent); }
+    .conn-endpoint.dragging { cursor: grabbing; pointer-events: none; }
+
+    /* Solid bend points on a selected straight connection. */
+    .conn-waypoint {
+      background: var(--accent);
+      cursor: grab;
+    }
+    .conn-waypoint:hover { background: var(--accent-h, var(--accent)); }
+
+    /* Hollow "add a bend" handles at segment midpoints. */
+    .conn-adder {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1.5px dashed var(--accent);
+      box-shadow: 0 0 0 2px var(--surface);
+      transform: translate(-50%, -50%);
+      opacity: 0.55;
+      cursor: copy;
+      z-index: 11;
+    }
+    .conn-adder:hover { opacity: 1; }
+
+    /* ── Per-node connect button ── */
+    .node-connect-btn {
+      position: absolute;
+      right: -26px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s, background 0.12s;
+      z-index: 10;
+      user-select: none;
+      font-family: var(--font);
+    }
+
+    .node.selected .node-connect-btn {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .node-connect-btn:hover {
+      background: var(--accent-h);
+    }
+
+    .node.connect-source .node-connect-btn {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ── Connect Mode (source selected) ── */
+    #canvas-container.connect-mode {
+      cursor: crosshair;
+    }
+
+    #canvas-container.connect-mode .port {
+      opacity: 0 !important;
+      pointer-events: none;
+    }
+
+    .node.connect-source {
+      box-shadow: 0 0 0 2px var(--accent), 0 0 0 5px #c7d2fe;
+    }
+
+    #canvas-container.connect-mode .node:not(.connect-source):hover {
+      box-shadow: 0 0 0 2px #22c55e;
+      cursor: pointer;
+    }
+
+    .port:hover {
+      transform: scale(1.45) translate(var(--tx, -50%), var(--ty, -50%)) !important;
+      background: var(--accent);
+    }
+
+    .port[data-port="top"] {
+      top: 0;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .port[data-port="right"] {
+      top: 50%;
+      right: 0;
+      transform: translate(50%, -50%);
+      --tx: 50%;
+      --ty: -50%;
+    }
+
+    .port[data-port="bottom"] {
+      bottom: 0;
+      left: 50%;
+      transform: translate(-50%, 50%);
+      --tx: -50%;
+      --ty: 50%;
+    }
+
+    .port[data-port="left"] {
+      top: 50%;
+      left: 0;
+      transform: translate(-50%, -50%);
+    }
+
+    /* ── Resize handles ── */
+    .resize-handle {
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      background: var(--surface);
+      border: 1.5px solid var(--accent);
+      border-radius: 2px;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 20;
+      transform: translate(-50%, -50%);
+    }
+
+    .node.sole-selected .resize-handle {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .resize-handle[data-handle="rc"] {
+      top: 50%;
+      left: 100%;
+      cursor: ew-resize;
+    }
+
+    .resize-handle[data-handle="lc"] {
+      top: 50%;
+      left: 0;
+      cursor: ew-resize;
+    }
+
+    .node .resize-handle[data-handle="tl"],
+    .node .resize-handle[data-handle="tc"],
+    .node .resize-handle[data-handle="tr"],
+    .node .resize-handle[data-handle="br"],
+    .node .resize-handle[data-handle="bc"],
+    .node .resize-handle[data-handle="bl"] {
+      display: none;
+    }
+
+    /* ── Group resize box ── */
+    .group-resize-box {
+      position: absolute;
+      border: 1.5px dashed var(--accent);
+      background: transparent;
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    .group-resize-box .resize-handle {
+      opacity: 1;
+      pointer-events: all;
+      background: var(--accent);
+      border-color: var(--surface);
+    }
+
+    #canvas-container.select-mode {
+      cursor: crosshair;
+    }
+
+    #canvas-container.select-mode .node {
+      cursor: pointer;
+    }
+
+    /* ── Properties Panel ── */
+    #props-panel {
+      width: 224px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      padding: 14px 12px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #props-panel h2 {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      color: var(--text-3);
+      margin-bottom: 14px;
+    }
+
+    #props-empty {
+      color: var(--text-3);
+      font-size: 12px;
+      text-align: center;
+      margin-top: 20px;
+      line-height: 1.5;
+    }
+
+    #props-form {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    #props-form.visible {
+      display: flex;
+    }
+
+    .field-group label {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-3);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .field-group input,
+    .field-group textarea {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-family: var(--font);
+      color: var(--text-1);
+      background: var(--bg);
+      resize: vertical;
+      transition: border-color 0.12s, background 0.12s;
+    }
+
+    .field-group input:focus,
+    .field-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: var(--surface);
+    }
+
+    .field-group textarea {
+      min-height: 64px;
+    }
+
+    .props-type-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      gap: 8px;
+    }
+
+    #props-node-type {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-2);
+      padding: 3px 7px;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      display: inline-block;
+      border: 1px solid var(--border);
+    }
+
+    .field-group--seq {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 0;
+      flex-shrink: 0;
+    }
+
+    .field-group--seq label {
+      margin-bottom: 0;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .field-group--seq input {
+      width: 52px;
+      text-align: center;
+      padding: 3px 6px;
+      -moz-appearance: textfield;
+    }
+
+    .field-group--seq input::-webkit-outer-spin-button,
+    .field-group--seq input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+    }
+
+    /* ── Ghost (palette drag preview) ── */
+    .drag-ghost {
+      position: fixed;
+      pointer-events: none;
+      opacity: 0.7;
+      z-index: 9999;
+      border: 1.5px dashed var(--accent);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-2);
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    /* ── Rubber-band selection ── */
+    .rubber-band {
+      position: absolute;
+      border: 1.5px dashed var(--accent);
+      background: rgba(99, 102, 241, 0.06);
+      pointer-events: none;
+      z-index: 5;
+      border-radius: 2px;
+    }
+
+    .node.rb-highlight {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    /* ── Sidebar divider ── */
+    .sidebar-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 12px 0 10px;
+    }
+
+    /* ── Props panel — conditional sections ── */
+    #props-db-section {
+      display: none;
+    }
+
+    #props-db-section.visible {
+      display: block;
+    }
+
+    #props-api-section {
+      display: none;
+    }
+
+    #props-api-section.visible {
+      display: block;
+    }
+
+    /* ── Props panel — Links section ── */
+    .props-links-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .props-links-header label {
+      margin-bottom: 0;
+    }
+
+    .props-add-link-btn {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--accent);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font);
+      transition: background 0.1s;
+    }
+
+    .props-add-link-btn:hover {
+      background: var(--bg);
+    }
+
+    .link-row {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .link-row input {
+      flex: 1;
+      padding: 5px 7px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-family: var(--font);
+      color: var(--text-1);
+      background: var(--bg);
+      min-width: 0;
+      transition: border-color 0.12s;
+    }
+
+    .link-row input:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: var(--surface);
+    }
+
+    .link-row input.link-name {
+      max-width: 68px;
+    }
+
+    .link-del-btn {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: none;
+      border: none;
+      color: var(--text-3);
+      font-size: 13px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+      transition: background 0.1s, color 0.1s;
+    }
+
+    .link-del-btn:hover {
+      background: #fee2e2;
+      color: var(--danger);
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-md);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="toolbar">
+    <h1>Flow Builder</h1>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" id="btn-undo" title="Ctrl+Z">Undo</button>
+    <button class="toolbar-btn" id="btn-redo" title="Ctrl+Y / Ctrl+Shift+Z">Redo</button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" id="btn-zoom-out" title="Zoom out" style="padding:5px 8px;">&#8722;</button>
+    <span id="zoom-display">100%</span>
+    <button class="toolbar-btn" id="btn-zoom-in" title="Zoom in" style="padding:5px 8px;">&#43;</button>
+    <button class="toolbar-btn" id="btn-reset-view" title="Reset view">Reset View</button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" id="btn-select-mode" title="Drag to box-select multiple nodes">Select</button>
+    <button class="toolbar-btn" id="btn-bring-front" title="Bring selected nodes to front">⤴ Front</button>
+    <button class="toolbar-btn" id="btn-send-back" title="Send selected nodes to back">⤵ Back</button>
+    <button class="toolbar-btn" id="btn-delete">Delete</button>
+    <button class="toolbar-btn danger" id="btn-clear">Clear All</button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" id="btn-export-png">Save PNG</button>
+    <button class="toolbar-btn" id="btn-export-svg">Save SVG</button>
+    <button class="toolbar-btn" id="btn-export">Save Diagram</button>
+    <button class="toolbar-btn" id="btn-import">Open Diagram</button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" id="btn-theme" title="Toggle dark mode">Dark</button>
+  </div>
+
+  <div id="app">
+
+    <aside id="sidebar">
+      <h2>Components</h2>
+
+      <div class="palette-item" data-type="start" title="Drag to canvas — shortcut: Ctrl+S">
+        <div class="palette-preview start-end"></div>
+        Start <span class="palette-key">Ctrl+S</span>
+      </div>
+
+      <div class="palette-item" data-type="end" title="Drag to canvas — shortcut: Ctrl+E">
+        <div class="palette-preview start-end"></div>
+        End <span class="palette-key">Ctrl+E</span>
+      </div>
+
+      <div class="palette-item" data-type="process" title="Drag to canvas — shortcut: Ctrl+P">
+        <div class="palette-preview process"></div>
+        Process <span class="palette-key">Ctrl+P</span>
+      </div>
+
+      <div class="palette-item" data-type="decision" title="Drag to canvas — shortcut: Ctrl+D">
+        <div class="palette-preview decision"></div>
+        Decision <span class="palette-key">Ctrl+D</span>
+      </div>
+
+      <div class="palette-item" data-type="note" title="Drag to canvas — shortcut: Ctrl+N">
+        <div class="palette-preview note"></div>
+        Note <span class="palette-key">Ctrl+N</span>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="palette-item" data-type="database" title="Drag to canvas — shortcut: Ctrl+B">
+        <div class="palette-preview database"></div>
+        Database <span class="palette-key">Ctrl+B</span>
+      </div>
+
+      <div class="palette-item" data-type="api" title="Drag to canvas — shortcut: Ctrl+A">
+        <div class="palette-preview api"></div>
+        API Call <span class="palette-key">Ctrl+A</span>
+      </div>
+
+      <div class="palette-item" data-type="queue" title="Drag to canvas — shortcut: Ctrl+Q">
+        <div class="palette-preview queue"></div>
+        Queue <span class="palette-key">Ctrl+Q</span>
+      </div>
+
+    </aside>
+
+    <div id="canvas-container">
+      <div id="canvas-world">
+        <div id="canvas-nodes"></div>
+        <svg id="canvas-svg">
+          <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+            </marker>
+            <marker id="arrowhead-selected" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444" />
+            </marker>
+            <marker id="arrowhead-hover" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#6366f1" />
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <aside id="props-panel">
+      <h2>Properties</h2>
+      <div id="props-empty">Select a component to edit its properties.</div>
+      <div id="props-form">
+        <div class="props-type-row">
+          <span id="props-node-type"></span>
+          <div class="field-group field-group--seq">
+            <label for="prop-seq">#</label>
+            <input type="number" id="prop-seq" min="1" step="1" placeholder="1">
+          </div>
+        </div>
+        <div class="field-group">
+          <label for="prop-label">Label</label>
+          <input type="text" id="prop-label" placeholder="Component label…">
+        </div>
+        <div class="field-group">
+          <label for="prop-notes">Notes</label>
+          <textarea id="prop-notes" placeholder="Add notes or description…"></textarea>
+        </div>
+        <div class="field-group">
+          <label for="prop-team">Response Team</label>
+          <input type="text" id="prop-team" placeholder="Team or owner name…">
+        </div>
+        <div class="field-group field-group--inline">
+          <label for="prop-locked" class="checkbox-label">
+            <input type="checkbox" id="prop-locked">
+            <span>Lock position</span>
+          </label>
+        </div>
+        <div class="field-group">
+          <label for="prop-color">Color</label>
+          <div class="color-row">
+            <input type="color" id="prop-color" value="#ffffff">
+            <button type="button" class="props-add-link-btn" id="btn-reset-color">Reset</button>
+          </div>
+        </div>
+        <div id="props-db-section">
+          <div class="field-group">
+            <label for="prop-db-server">DB Server</label>
+            <input type="text" id="prop-db-server" placeholder="host:port / connection string…">
+          </div>
+        </div>
+        <div id="props-api-section">
+          <div class="field-group">
+            <label for="prop-api-url">API URL</label>
+            <input type="text" id="prop-api-url" placeholder="https://api.example.com/endpoint">
+          </div>
+          <div class="field-group">
+            <label for="prop-api-request">Request</label>
+            <textarea id="prop-api-request" placeholder="Method, endpoint, headers, body…"></textarea>
+          </div>
+          <div class="field-group">
+            <label for="prop-api-response">Response</label>
+            <textarea id="prop-api-response" placeholder="Status code, body…"></textarea>
+          </div>
+        </div>
+        <div class="field-group" id="props-links-group">
+          <div class="props-links-header">
+            <label>Links</label>
+            <button class="props-add-link-btn" id="btn-add-link">+ Add</button>
+          </div>
+          <div id="props-links-list"></div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <input type="file" id="import-file-input" accept=".json" style="display:none">
+
+  <!-- <script src="script.js"></script> -->
+  <script>
+    'use strict';
+
+    // ── State ──────────────────────────────────────────────────────────────────
+
+    const state = {
+      nodes: {},
+      connections: {},
+      selectedNodeIds: new Set(),
+      selectedConnId: null,
+
+      dragging: {
+        active: false,
+        lastX: 0,
+        lastY: 0
+      },
+
+      rubberBand: {
+        active: false,
+        startX: 0,
+        startY: 0,
+        element: null
+      },
+
+      connecting: {
+        active: false,
+        fromNodeId: null,
+        fromPort: null,
+        tempPath: null
+      },
+
+      // Dragging one end of an existing (selected) connection onto a new dot.
+      reanchor: {
+        active: false,
+        connId: null,
+        end: null,        // 'from' | 'to' — which end is being moved
+        tempPath: null,
+        before: null      // snapshot of the endpoint for undo
+      },
+
+      // Dragging a waypoint (bend point) of the selected connection.
+      waypointEdit: { active: false },
+
+      pendingCreate: {
+        active: false,
+        type: null,
+        ghost: null
+      },
+
+      resizing: {
+        active: false,
+        nodeId: null,
+        handle: null,
+        startMouseX: 0,
+        startMouseY: 0,
+        startX: 0,
+        startY: 0,
+        startWidth: 0,
+        startHeight: 0,
+        minW: 0,
+        minH: 0
+      },
+
+      pan: { x: 0, y: 0 },
+      panning: { active: false, lastX: 0, lastY: 0 },
+      connectMode: { fromNodeId: null },
+      zoom: 1,
+      seqCounter: 0,
+      selectMode: false,
+
+      groupResize: {
+        active: false,
+        handle: null,
+        startMouseX: 0,
+        startMouseY: 0,
+        startBox: null,
+        startNodes: null
+      },
+      groupBoxEl: null
+    };
+
+    let spaceHeld = false;
+    let clipboard = null;
+
+    // Edit handles shown on the currently selected connection.
+    let connEndpointEls = null;   // { from, to } — re-anchor each end
+    let connWaypointEls = [];      // solid dots, one per waypoint (drag to move)
+    let connAdderEls = [];         // hollow dots at segment midpoints (drag to add)
+
+    // ── Undo history ───────────────────────────────────────────────────────────
+
+    const history = [];
+    let redoStack = [];
+    const MAX_HISTORY = 50;
+    let undoing = false;
+
+    function pushUndo(fn) {
+      if (undoing) return;
+      history.push(fn);
+      if (history.length > MAX_HISTORY) history.shift();
+      redoStack = [];
+      updateUndoButton();
+      updateRedoButton();
+      scheduleAutosave();
+    }
+
+    function undo() {
+      const fn = history.pop();
+      if (!fn) return;
+      const snap = serializeState();
+      undoing = true;
+      fn();
+      undoing = false;
+      redoStack.push(snap);
+      updateUndoButton();
+      updateRedoButton();
+      scheduleAutosave();
+    }
+
+    function redo() {
+      const snap = redoStack.pop();
+      if (!snap) return;
+      const currentSnap = serializeState();
+      undoing = true;
+      loadDiagram(snap);
+      undoing = false;
+      history.push(() => {
+        undoing = true;
+        loadDiagram(currentSnap);
+        undoing = false;
+      });
+      if (history.length > MAX_HISTORY) history.shift();
+      updateUndoButton();
+      updateRedoButton();
+      scheduleAutosave();
+    }
+
+    function updateUndoButton() {
+      const btn = document.getElementById('btn-undo');
+      if (btn) btn.disabled = history.length === 0;
+    }
+
+    function updateRedoButton() {
+      const btn = document.getElementById('btn-redo');
+      if (btn) btn.disabled = redoStack.length === 0;
+    }
+
+    // ── DOM refs ───────────────────────────────────────────────────────────────
+
+    let canvasContainer, canvasWorld, canvasNodes, canvasSvg;
+    let propsEmpty, propsForm, propsNodeType;
+    let propSeq, propLabel, propNotes, propTeam, propDbServer, propApiUrl, propApiRequest, propApiResponse;
+    let zoomDisplay;
+
+    // ── Node dimensions ────────────────────────────────────────────────────────
+
+    const NODE_DIMS = {
+      start: { width: 120, height: 50 },
+      end: { width: 120, height: 50 },
+      process: { width: 150, height: 60 },
+      decision: { width: 120, height: 80 },
+      note: { width: 140, height: 90 },
+      database: { width: 130, height: 100 },
+      api: { width: 210, height: 170 },
+      queue: { width: 160, height: 55 },
+    };
+
+    const NODE_MIN_DIMS = {
+      start: { w: 60, h: 28 },
+      end: { w: 60, h: 28 },
+      process: { w: 80, h: 36 },
+      decision: { w: 80, h: 56 },
+      note: { w: 100, h: 50 },
+      database: { w: 80, h: 60 },
+      api: { w: 140, h: 110 },
+      queue: { w: 80, h: 36 },
+    };
+
+    function getMinDims(type) {
+      return NODE_MIN_DIMS[type] || { w: 60, h: 36 };
+    }
+
+    // Measure the minimum dimensions the node needs to show its current content.
+    // Called once at resize-start to avoid per-frame reflows.
+    function getContentMinDims(node) {
+      const el = node.element;
+      const savedW = el.style.width;
+      const savedH = el.style.height;
+
+      el.style.width = 'auto';
+      el.style.height = 'auto';
+      const contentW = el.offsetWidth;
+      const contentH = el.offsetHeight;
+
+      el.style.width = savedW;
+      el.style.height = savedH;
+
+      const base = getMinDims(node.type);
+      return { w: Math.max(base.w, contentW), h: Math.max(base.h, contentH) };
+    }
+
+    const NODE_LABELS = {
+      start: 'Start', end: 'End', process: 'Process', decision: 'Decision?', note: 'Note',
+      database: 'Database', api: 'API Call', queue: 'Queue',
+    };
+
+    function getDefaultLabel(type) {
+      return NODE_LABELS[type] || type;
+    }
+
+    // ── Init ───────────────────────────────────────────────────────────────────
+
+    function init() {
+      canvasContainer = document.getElementById('canvas-container');
+      canvasWorld = document.getElementById('canvas-world');
+      canvasNodes = document.getElementById('canvas-nodes');
+      canvasSvg = document.getElementById('canvas-svg');
+      propsEmpty = document.getElementById('props-empty');
+      propsForm = document.getElementById('props-form');
+      propsNodeType = document.getElementById('props-node-type');
+      propSeq = document.getElementById('prop-seq');
+      propLabel = document.getElementById('prop-label');
+      propNotes = document.getElementById('prop-notes');
+      propTeam = document.getElementById('prop-team');
+      propDbServer = document.getElementById('prop-db-server');
+      propApiUrl = document.getElementById('prop-api-url');
+      propApiRequest = document.getElementById('prop-api-request');
+      propApiResponse = document.getElementById('prop-api-response');
+      zoomDisplay = document.getElementById('zoom-display');
+
+      document.querySelectorAll('.palette-item').forEach(item => {
+        item.addEventListener('mousedown', onPaletteMouseDown);
+      });
+
+      canvasContainer.addEventListener('mousedown', onContainerMouseDown);
+      canvasNodes.addEventListener('mousedown', onCanvasMouseDown);
+      canvasSvg.addEventListener('click', onSvgClick);
+      canvasSvg.addEventListener('dblclick', onSvgDblClick);
+      canvasContainer.addEventListener('wheel', onWheel, { passive: false });
+
+      document.addEventListener('mousemove', onDocumentMouseMove);
+      document.addEventListener('mouseup', onDocumentMouseUp);
+      document.addEventListener('keydown', onKeyDown);
+      document.addEventListener('keyup', onKeyUp);
+
+      // Prevent context menu on middle-click
+      canvasContainer.addEventListener('contextmenu', e => e.preventDefault());
+
+      propSeq.addEventListener('focus', onPropFocus);
+      propSeq.addEventListener('blur', onPropBlur);
+      propSeq.addEventListener('input', () => onPropsInput('seq', propSeq.value));
+      propLabel.addEventListener('focus', onPropFocus);
+      propNotes.addEventListener('focus', onPropFocus);
+      propTeam.addEventListener('focus', onPropFocus);
+      propDbServer.addEventListener('focus', onPropFocus);
+      propDbServer.addEventListener('blur', onPropBlur);
+      propDbServer.addEventListener('input', () => onPropsInput('dbServer', propDbServer.value));
+      propApiUrl.addEventListener('focus', onPropFocus);
+      propApiRequest.addEventListener('focus', onPropFocus);
+      propApiResponse.addEventListener('focus', onPropFocus);
+      propLabel.addEventListener('blur', onPropBlur);
+      propNotes.addEventListener('blur', onPropBlur);
+      propTeam.addEventListener('blur', onPropBlur);
+      propApiUrl.addEventListener('blur', onPropBlur);
+      propApiRequest.addEventListener('blur', onPropBlur);
+      propApiResponse.addEventListener('blur', onPropBlur);
+      propLabel.addEventListener('input', () => onPropsInput('label', propLabel.value));
+      propNotes.addEventListener('input', () => onPropsInput('notes', propNotes.value));
+      propTeam.addEventListener('input', () => onPropsInput('responseTeam', propTeam.value));
+      propApiUrl.addEventListener('input', () => onPropsInput('apiUrl', propApiUrl.value));
+      propApiRequest.addEventListener('input', () => onPropsInput('apiRequest', propApiRequest.value));
+      propApiResponse.addEventListener('input', () => onPropsInput('apiResponse', propApiResponse.value));
+      document.getElementById('btn-add-link').addEventListener('click', onAddLink);
+      document.getElementById('prop-color').addEventListener('input', e => {
+        if (state.selectedNodeIds.size !== 1) return;
+        const id = [...state.selectedNodeIds][0];
+        const n = state.nodes[id];
+        if (!n) return;
+        const prev = n.customColor || null;
+        n.customColor = e.target.value;
+        applyNodeColor(n);
+        if (prev !== n.customColor) pushUndo(() => { n.customColor = prev; applyNodeColor(n); });
+      });
+      document.getElementById('btn-reset-color').addEventListener('click', () => {
+        if (state.selectedNodeIds.size !== 1) return;
+        const id = [...state.selectedNodeIds][0];
+        const n = state.nodes[id];
+        if (!n || !n.customColor) return;
+        const prev = n.customColor;
+        n.customColor = null;
+        applyNodeColor(n);
+        document.getElementById('prop-color').value = '#ffffff';
+        pushUndo(() => { n.customColor = prev; applyNodeColor(n); });
+      });
+      document.getElementById('prop-locked').addEventListener('change', e => {
+        if (state.selectedNodeIds.size !== 1) return;
+        const id = [...state.selectedNodeIds][0];
+        const n = state.nodes[id];
+        if (!n) return;
+        const prev = !!n.locked;
+        n.locked = e.target.checked;
+        n.element.classList.toggle('node--locked', n.locked);
+        pushUndo(() => {
+          const nn = state.nodes[id];
+          if (!nn) return;
+          nn.locked = prev;
+          nn.element.classList.toggle('node--locked', prev);
+          const cb = document.getElementById('prop-locked');
+          if (cb && state.selectedNodeIds.has(id)) cb.checked = prev;
+        });
+      });
+
+      document.getElementById('btn-undo').addEventListener('click', undo);
+      document.getElementById('btn-redo').addEventListener('click', redo);
+      document.getElementById('btn-zoom-in').addEventListener('click', () => zoomAtCenter(ZOOM_STEP));
+      document.getElementById('btn-zoom-out').addEventListener('click', () => zoomAtCenter(-ZOOM_STEP));
+      document.getElementById('btn-reset-view').addEventListener('click', resetView);
+      document.getElementById('btn-export-png').addEventListener('click', exportPNG);
+      document.getElementById('btn-export-svg').addEventListener('click', exportSVG);
+      document.getElementById('btn-select-mode').addEventListener('click', toggleSelectMode);
+      document.getElementById('btn-bring-front').addEventListener('click', () => reorderSelected('front'));
+      document.getElementById('btn-send-back').addEventListener('click', () => reorderSelected('back'));
+      document.getElementById('btn-theme').addEventListener('click', toggleTheme);
+      const savedTheme = (() => { try { return localStorage.getItem('flow:theme'); } catch { return null; } })();
+      if (savedTheme === 'dark') document.documentElement.classList.add('dark');
+      updateThemeButton();
+      document.getElementById('btn-delete').addEventListener('click', deleteSelected);
+      document.getElementById('btn-clear').addEventListener('click', clearAll);
+      document.getElementById('btn-export').addEventListener('click', exportDiagram);
+      document.getElementById('btn-import').addEventListener('click', () =>
+        document.getElementById('import-file-input').click()
+      );
+      document.getElementById('import-file-input').addEventListener('change', importDiagram);
+
+      window.addEventListener('beforeunload', e => {
+        if (Object.keys(state.nodes).length > 0) {
+          e.preventDefault();
+          e.returnValue = '';
+        }
+      });
+
+      updateUndoButton();
+      updateRedoButton();
+      tryRestoreAutosave();
+    }
+
+    // ── Pan / zoom helpers ─────────────────────────────────────────────────────
+
+    const ZOOM_MIN = 0.15;
+    const ZOOM_MAX = 4;
+    const ZOOM_STEP = 0.1;
+
+    function toWorldCoords(clientX, clientY) {
+      const rect = canvasContainer.getBoundingClientRect();
+      return {
+        x: (clientX - rect.left - state.pan.x) / state.zoom,
+        y: (clientY - rect.top - state.pan.y) / state.zoom
+      };
+    }
+
+    function applyTransform() {
+      canvasWorld.style.transform =
+        `translate(${state.pan.x}px, ${state.pan.y}px) scale(${state.zoom})`;
+      if (zoomDisplay) zoomDisplay.textContent = Math.round(state.zoom * 100) + '%';
+    }
+
+    function applyPan(dx, dy) {
+      state.pan.x += dx;
+      state.pan.y += dy;
+      applyTransform();
+    }
+
+    // Zoom toward a point given in canvas-container screen coordinates.
+    function zoomAt(screenX, screenY, delta) {
+      const newZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, state.zoom + delta));
+      if (newZoom === state.zoom) return;
+      // Keep the world point under (screenX, screenY) fixed.
+      const wx = (screenX - state.pan.x) / state.zoom;
+      const wy = (screenY - state.pan.y) / state.zoom;
+      state.zoom = newZoom;
+      state.pan.x = screenX - wx * newZoom;
+      state.pan.y = screenY - wy * newZoom;
+      applyTransform();
+    }
+
+    // Zoom toward the visual centre of the canvas container.
+    function zoomAtCenter(delta) {
+      const rect = canvasContainer.getBoundingClientRect();
+      zoomAt(rect.width / 2, rect.height / 2, delta);
+    }
+
+    function resetView() {
+      state.zoom = 1;
+
+      const nodes = Object.values(state.nodes);
+      const first = nodes.length
+        ? nodes.reduce((a, b) => ((a.seq || Infinity) <= (b.seq || Infinity) ? a : b))
+        : null;
+
+      if (first) {
+        const rect = canvasContainer.getBoundingClientRect();
+        const cx = first.x + first.width / 2;
+        const cy = first.y + first.height / 2;
+        state.pan.x = rect.width / 2 - cx;
+        state.pan.y = rect.height / 2 - cy;
+      } else {
+        state.pan.x = 0;
+        state.pan.y = 0;
+      }
+      applyTransform();
+    }
+
+    function onWheel(e) {
+      e.preventDefault();
+      const rect = canvasContainer.getBoundingClientRect();
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+      // Scale the step by zoom so zooming feels proportional at any level.
+      const delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+      zoomAt(screenX, screenY, delta);
+    }
+
+    // ── Notes formatter ───────────────────────────────────────────────────────
+
+    function formatNotes(raw) {
+      if (!raw || !raw.trim()) return '';
+
+      const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      const lines = raw.split('\n');
+      let html = '';
+      let inList = false;
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        const bullet = trimmed.match(/^[-*•]\s+(.*)/);
+
+        if (bullet) {
+          if (!inList) { html += '<ul>'; inList = true; }
+          html += `<li>${esc(bullet[1])}</li>`;
+        } else {
+          if (inList) { html += '</ul>'; inList = false; }
+          html += trimmed ? `<span>${esc(trimmed)}</span><br>` : '<br>';
+        }
+      }
+
+      if (inList) html += '</ul>';
+      return html.replace(/(<br>)+$/, '');
+    }
+
+    function setNodeDesc(el, notes) {
+      const descEl = el.querySelector('.node-desc');
+      if (!descEl) return;
+      const trimmed = (notes || '').trim();
+      descEl.innerHTML = trimmed ? formatNotes(notes) : '';
+      descEl.classList.toggle('is-empty', !trimmed);
+    }
+
+    function renderNodeLinks(el, links) {
+      const container = el.querySelector('.node-links');
+      if (!container) return;
+      container.innerHTML = '';
+      (links || []).forEach(({ name, url }) => {
+        if (!(url || '').trim()) return;
+        const a = document.createElement('a');
+        a.className = 'node-link';
+        a.href = url.trim();
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = (name || '').trim() || url.trim();
+        a.title = url.trim();
+        a.addEventListener('mousedown', e => e.stopPropagation());
+        a.addEventListener('click', e => e.stopPropagation());
+        container.appendChild(a);
+      });
+    }
+
+    function setDbServer(el, value) {
+      const dbEl = el.querySelector('.db-server');
+      if (!dbEl) return;
+      const v = (value || '').trim();
+      dbEl.textContent = v;
+      dbEl.classList.toggle('visible', v.length > 0);
+    }
+
+    function setApiUrl(el, url) {
+      const urlEl = el.querySelector('.api-url');
+      if (!urlEl) return;
+      const v = (url || '').trim();
+      urlEl.textContent = v;
+      urlEl.classList.toggle('visible', v.length > 0);
+    }
+
+    function setApiSections(el, request, response) {
+      const reqBd = el.querySelector('.api-req-bd');
+      const resBd = el.querySelector('.api-res-bd');
+      if (reqBd) reqBd.textContent = (request || '').trim();
+      if (resBd) resBd.textContent = (response || '').trim();
+    }
+
+    function autoResizeNode(node) {
+      const el = node.element;
+      const collapsed = el.classList.contains('node--collapsed');
+      el.style.height = 'auto';
+      const natural = el.offsetHeight;
+      const min = getMinDims(node.type);
+      const newH = collapsed ? Math.max(36, natural) : Math.max(min.h, natural);
+      el.style.height = newH + 'px';
+      if (node.height !== newH) {
+        node.height = newH;
+        updateConnectionsForNode(node.id);
+      }
+    }
+
+    // ── Node creation ──────────────────────────────────────────────────────────
+
+    function createNode(type, x, y) {
+      const id = 'node-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+      const dims = NODE_DIMS[type] || NODE_DIMS.process;
+
+      const node = {
+        id, type,
+        seq: ++state.seqCounter,
+        label: getDefaultLabel(type),
+        notes: '',
+        responseTeam: '',
+        links: [
+          { name: 'GitHub', url: '' },
+          { name: 'Jira', url: '' },
+          { name: 'Folder Path', url: '' },
+        ],
+        dbServer: '',
+        apiUrl: '',
+        apiRequest: '',
+        apiResponse: '',
+        collapsed: false,
+        locked: false,
+        customColor: null,
+        x, y,
+        width: dims.width,
+        height: dims.height,
+        element: null
+      };
+
+      node.element = buildNodeElement(node);
+      canvasNodes.appendChild(node.element);
+      state.nodes[id] = node;
+      return node;
+    }
+
+    function getTextOffsetAtPoint(rootEl, x, y) {
+      let range = null;
+      if (document.caretRangeFromPoint) range = document.caretRangeFromPoint(x, y);
+      else if (document.caretPositionFromPoint) {
+        const p = document.caretPositionFromPoint(x, y);
+        if (p) { range = document.createRange(); range.setStart(p.offsetNode, p.offset); }
+      }
+      if (!range) return null;
+      if (!rootEl.contains(range.startContainer) && range.startContainer !== rootEl) return null;
+
+      const pre = document.createRange();
+      pre.setStart(rootEl, 0);
+      pre.setEnd(range.startContainer, range.startOffset);
+      return pre.toString().length;
+    }
+
+    function setNodeLabelText(nodeEl, text) {
+      const textEl = nodeEl.querySelector('.node-label-text');
+      if (textEl) textEl.textContent = text;
+      else {
+        const lbl = nodeEl.querySelector('.node-label');
+        if (lbl) lbl.textContent = text;
+      }
+    }
+
+    function buildNodeElement(node) {
+      const el = document.createElement('div');
+      el.className = `node node--${node.type}`;
+      el.dataset.nodeId = node.id;
+      el.style.left = node.x + 'px';
+      el.style.top = node.y + 'px';
+      el.style.width = node.width + 'px';
+      el.style.height = node.height + 'px';
+
+      // Sequence badge
+      const seqEl = document.createElement('span');
+      seqEl.className = 'node-seq';
+      seqEl.textContent = node.seq || '';
+      el.appendChild(seqEl);
+
+      const label = document.createElement('span');
+      label.className = 'node-label';
+      const labelText = document.createElement('span');
+      labelText.className = 'node-label-text';
+      labelText.textContent = node.label;
+      label.appendChild(labelText);
+      el.appendChild(label);
+
+      if (node.type !== 'decision' && node.type !== 'process') {
+        const caret = document.createElement('span');
+        caret.className = 'node-label-caret';
+        caret.textContent = '▾';
+        caret.title = 'Click title to collapse / expand';
+        label.appendChild(caret);
+
+        let labelClickTimer = null;
+        label.addEventListener('click', e => {
+          if (label.isContentEditable) return;
+          e.stopPropagation();
+          if (e.detail >= 2) {
+            if (labelClickTimer) { clearTimeout(labelClickTimer); labelClickTimer = null; }
+            return;
+          }
+          if (labelClickTimer) clearTimeout(labelClickTimer);
+          labelClickTimer = setTimeout(() => {
+            labelClickTimer = null;
+            toggleNodeCollapsed(el.dataset.nodeId);
+          }, 230);
+        });
+      }
+
+      const desc = document.createElement('span');
+      desc.className = 'node-desc';
+      const notesText = (node.notes || '').trim();
+      desc.innerHTML = notesText ? formatNotes(node.notes) : '';
+      desc.classList.toggle('is-empty', !notesText);
+      desc.addEventListener('dblclick', e => {
+        if (desc.isContentEditable) return;
+        e.preventDefault();
+        e.stopPropagation();
+        startNotesEdit(node.id, e.clientX, e.clientY);
+      });
+
+      const linksEl = document.createElement('div');
+      linksEl.className = 'node-links';
+
+      if (node.type !== 'decision' && node.type !== 'process') {
+        // Collapsible extra content wrapper
+        const extraEl = document.createElement('div');
+        extraEl.className = 'node-extra';
+        extraEl.appendChild(desc);
+
+        if (node.type === 'database') {
+          const dbEl = document.createElement('div');
+          dbEl.className = 'db-server';
+          extraEl.appendChild(dbEl);
+        }
+
+        if (node.type === 'api') {
+          const urlEl = document.createElement('div');
+          urlEl.className = 'api-url';
+          extraEl.appendChild(urlEl);
+
+          const sectionsEl = document.createElement('div');
+          sectionsEl.className = 'api-sections';
+          ['req', 'res'].forEach(key => {
+            const section = document.createElement('div');
+            section.className = 'api-section';
+            const hd = document.createElement('div');
+            hd.className = 'api-section-hd';
+            hd.textContent = key === 'req' ? 'Request' : 'Response';
+            const bd = document.createElement('div');
+            bd.className = `api-section-bd api-${key}-bd`;
+            section.appendChild(hd);
+            section.appendChild(bd);
+            sectionsEl.appendChild(section);
+          });
+          extraEl.appendChild(sectionsEl);
+        }
+
+        extraEl.appendChild(linksEl);
+        el.appendChild(extraEl);
+
+        // Fill content now that elements are in the DOM tree
+        if (node.type === 'database') setDbServer(el, node.dbServer);
+        if (node.type === 'api') { setApiUrl(el, node.apiUrl); setApiSections(el, node.apiRequest, node.apiResponse); }
+        renderNodeLinks(el, node.links || []);
+
+        // Collapse toggle
+        const toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'node-toggle-btn';
+        toggleBtn.textContent = '−';
+        toggleBtn.title = 'Collapse / expand';
+        toggleBtn.addEventListener('mousedown', e => e.stopPropagation());
+        toggleBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          toggleNodeCollapsed(el.dataset.nodeId);
+        });
+        el.appendChild(toggleBtn);
+
+        if (node.collapsed) {
+          el.classList.add('node--collapsed');
+          toggleBtn.textContent = '+';
+        }
+      } else {
+        // decision & process: no accordion — description always shown in full
+        el.appendChild(desc);
+        el.appendChild(linksEl);
+        renderNodeLinks(el, node.links || []);
+      }
+
+      el.addEventListener('dblclick', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = el.dataset.nodeId;
+        if (e.target.closest('.node-link') ||
+          e.target.closest('.node-notes-editor') ||
+          e.target.closest('.api-sections') ||
+          e.target.closest('.node-toggle-btn')) return;
+        if (e.target.closest('.node-label')) {
+          startLabelEdit(id);
+        }
+      });
+
+      // Per-node connect button (appears on hover, right side)
+      const connectBtn = document.createElement('button');
+      connectBtn.type = 'button';
+      connectBtn.className = 'node-connect-btn';
+      connectBtn.title = 'Connect to another node';
+      connectBtn.textContent = '→';
+      connectBtn.addEventListener('mousedown', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        activateConnectSource(el.dataset.nodeId);
+      });
+      el.appendChild(connectBtn);
+
+      ['top', 'right', 'bottom', 'left'].forEach(port => {
+        const p = document.createElement('div');
+        p.className = 'port';
+        p.dataset.port = port;
+        p.dataset.nodeId = node.id;
+        el.appendChild(p);
+      });
+
+      ['tl', 'tc', 'tr', 'rc', 'br', 'bc', 'bl', 'lc'].forEach(h => {
+        const rh = document.createElement('div');
+        rh.className = 'resize-handle';
+        rh.dataset.handle = h;
+        rh.dataset.nodeId = node.id;
+        el.appendChild(rh);
+      });
+
+      return el;
+    }
+
+    function toggleNodeCollapsed(nodeId) {
+      const node = state.nodes[nodeId];
+      if (!node) return;
+      const oldH = node.height;
+      const isCollapsed = node.element.classList.toggle('node--collapsed');
+      node.collapsed = isCollapsed;
+      const btn = node.element.querySelector('.node-toggle-btn');
+      if (btn) btn.textContent = isCollapsed ? '+' : '−';
+      autoResizeNode(node);
+      const delta = node.height - oldH;
+      if (delta !== 0) shiftNodesBelow(node, oldH, delta);
+    }
+
+    function shiftNodesBelow(node, oldH, delta) {
+      const moved = new Set([node.id]);
+      // Each frontier entry is the rect of a "pusher" — anything overlapping its
+      // bottom edge gets pushed by `delta`, then itself becomes a pusher.
+      const frontier = [{
+        left: node.x,
+        right: node.x + node.width,
+        bottom: node.y + Math.min(oldH, node.height),
+      }];
+
+      while (frontier.length) {
+        const f = frontier.shift();
+        for (const n of Object.values(state.nodes)) {
+          if (moved.has(n.id) || n.locked) continue;
+          if (n.y < f.bottom) continue;
+          const nRight = n.x + n.width;
+          if (nRight <= f.left || n.x >= f.right) continue; // no horizontal overlap
+          n.y += delta;
+          n.element.style.top = n.y + 'px';
+          updateConnectionsForNode(n.id);
+          moved.add(n.id);
+          frontier.push({
+            left: n.x,
+            right: n.x + n.width,
+            bottom: n.y + n.height,
+          });
+        }
+      }
+    }
+
+    // ── Snapshot / restore helpers ─────────────────────────────────────────────
+
+    function snapshotNode(nodeId) {
+      const n = state.nodes[nodeId];
+      return {
+        id: n.id, type: n.type, seq: n.seq,
+        label: n.label, notes: n.notes, responseTeam: n.responseTeam,
+        links: JSON.parse(JSON.stringify(n.links || [])),
+        dbServer: n.dbServer || '',
+        apiUrl: n.apiUrl || '', apiRequest: n.apiRequest || '', apiResponse: n.apiResponse || '',
+        collapsed: n.collapsed || false,
+        locked: n.locked || false,
+        customColor: n.customColor || null,
+        x: n.x, y: n.y, width: n.width, height: n.height
+      };
+    }
+
+    function snapshotConnection(conn) {
+      return {
+        fromNodeId: conn.fromNodeId, fromPort: conn.fromPort,
+        toNodeId: conn.toNodeId, toPort: conn.toPort,
+        label: conn.label || '',
+        fromAnchored: !!conn.fromAnchored, toAnchored: !!conn.toAnchored,
+        waypoints: (conn.waypoints || []).map(p => ({ x: p.x, y: p.y }))
+      };
+    }
+
+    function restoreNode(snap) {
+      const node = { ...snap, element: null };
+      node.element = buildNodeElement(node);
+      canvasNodes.appendChild(node.element);
+      state.nodes[node.id] = node;
+      if (node.locked) node.element.classList.add('node--locked');
+      if (node.customColor) applyNodeColor(node);
+    }
+
+    function restoreConnection(snap) {
+      createConnection(snap.fromNodeId, snap.fromPort, snap.toNodeId, snap.toPort, snap.label || '',
+        { from: snap.fromAnchored, to: snap.toAnchored }, snap.waypoints);
+    }
+
+    // ── Inline editing ────────────────────────────────────────────────────────
+
+    function startLabelEdit(nodeId) {
+      const node = state.nodes[nodeId];
+      if (!node) return;
+      const labelEl = node.element.querySelector('.node-label-text') ||
+        node.element.querySelector('.node-label');
+      if (labelEl.contentEditable === 'true') return;
+
+      const oldLabel = node.label;
+      labelEl.contentEditable = 'true';
+      labelEl.focus();
+
+      const range = document.createRange();
+      range.selectNodeContents(labelEl);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      let done = false;
+
+      function commit() {
+        if (done) return;
+        done = true;
+        labelEl.contentEditable = 'false';
+        const newLabel = (labelEl.textContent || '').trim() || oldLabel;
+        labelEl.textContent = newLabel;
+        if (newLabel !== oldLabel) {
+          node.label = newLabel;
+          pushUndo(() => {
+            const n = state.nodes[nodeId];
+            if (!n) return;
+            n.label = oldLabel;
+            setNodeLabelText(n.element, oldLabel);
+            if (state.selectedNodeIds.has(nodeId)) propLabel.value = oldLabel;
+          });
+          if (state.selectedNodeIds.has(nodeId)) propLabel.value = newLabel;
+        }
+      }
+
+      function cancel() {
+        if (done) return;
+        done = true;
+        labelEl.contentEditable = 'false';
+        labelEl.textContent = oldLabel;
+      }
+
+      labelEl.addEventListener('blur', commit, { once: true });
+      labelEl.addEventListener('keydown', e => {
+        e.stopPropagation();
+        if (e.key === 'Enter') { e.preventDefault(); labelEl.blur(); }
+        if (e.key === 'Escape') { cancel(); labelEl.removeEventListener('blur', commit); }
+      });
+    }
+
+    function startNotesEdit(nodeId, clickX, clickY) {
+      const node = state.nodes[nodeId];
+      if (!node) return;
+
+      const descEl = node.element.querySelector('.node-desc');
+      if (!descEl || descEl.isContentEditable) return;
+
+      const oldNotes = node.notes || '';
+
+      descEl.classList.remove('is-empty');
+      descEl.classList.add('editing');
+      descEl.textContent = oldNotes;
+      descEl.contentEditable = 'true';
+      descEl.focus();
+
+      if (clickX != null && clickY != null) {
+        let range = null;
+        if (document.caretRangeFromPoint) range = document.caretRangeFromPoint(clickX, clickY);
+        else if (document.caretPositionFromPoint) {
+          const p = document.caretPositionFromPoint(clickX, clickY);
+          if (p) { range = document.createRange(); range.setStart(p.offsetNode, p.offset); }
+        }
+        if (range && descEl.contains(range.startContainer)) {
+          range.collapse(true);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        } else {
+          const r = document.createRange();
+          r.selectNodeContents(descEl);
+          r.collapse(false);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(r);
+        }
+      } else {
+        const r = document.createRange();
+        r.selectNodeContents(descEl);
+        r.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(r);
+      }
+
+      let done = false;
+
+      function commit() {
+        if (done) return;
+        done = true;
+        const newNotes = descEl.textContent || '';
+        descEl.contentEditable = 'false';
+        descEl.classList.remove('editing');
+        node.notes = newNotes;
+        setNodeDesc(node.element, newNotes);
+        autoResizeNode(node);
+        if (newNotes !== oldNotes) {
+          pushUndo(() => {
+            const n = state.nodes[nodeId];
+            if (!n) return;
+            n.notes = oldNotes;
+            setNodeDesc(n.element, oldNotes);
+            autoResizeNode(n);
+            if (state.selectedNodeIds.has(nodeId)) propNotes.value = oldNotes;
+          });
+          if (state.selectedNodeIds.has(nodeId)) propNotes.value = newNotes;
+        }
+      }
+
+      function cancel() {
+        if (done) return;
+        done = true;
+        descEl.contentEditable = 'false';
+        descEl.classList.remove('editing');
+        node.notes = oldNotes;
+        setNodeDesc(node.element, oldNotes);
+        autoResizeNode(node);
+      }
+
+      descEl.addEventListener('blur', commit, { once: true });
+      descEl.addEventListener('input', () => autoResizeNode(node));
+      descEl.addEventListener('keydown', e => {
+        e.stopPropagation();
+        if (e.key === 'Escape') { cancel(); descEl.removeEventListener('blur', commit); }
+      });
+    }
+
+    // ── Container mousedown (for panning) ─────────────────────────────────────
+
+    function onContainerMouseDown(e) {
+      // Middle mouse OR space+left → always pan
+      if (e.button === 1 || (e.button === 0 && spaceHeld)) {
+        e.preventDefault();
+        e.stopPropagation();
+        state.panning.active = true;
+        state.panning.lastX = e.clientX;
+        state.panning.lastY = e.clientY;
+        canvasContainer.classList.add('panning');
+        canvasContainer.classList.remove('space-held');
+        return;
+      }
+
+      // Left click on background (not on a node, port, handle, or connection)
+      if (e.button === 0 && !e.shiftKey &&
+        !e.target.closest('.node') &&
+        !e.target.closest('.port') &&
+        !e.target.closest('.resize-handle') &&
+        !e.target.closest('.node-notes-editor') &&
+        !e.target.closest('[contenteditable="true"]') &&
+        !e.target.closest('path.connection, path.connection-hit')) {
+        // Commit any open inline editor (label textarea, notes, props fields)
+        // before we preventDefault — otherwise the focus shift (and its blur)
+        // never happens and the editor stays open.
+        const ae = document.activeElement;
+        if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) {
+          ae.blur();
+        }
+        e.preventDefault();
+        if (state.selectMode) {
+          clearSelection();
+          clearConnectSource();
+          startRubberBand(e);
+          return;
+        }
+        clearConnectSource();
+        state.panning.active = true;
+        state.panning.lastX = e.clientX;
+        state.panning.lastY = e.clientY;
+        state.panning.didMove = false;
+        canvasContainer.classList.add('panning');
+      }
+    }
+
+    function toggleSelectMode() {
+      state.selectMode = !state.selectMode;
+      const btn = document.getElementById('btn-select-mode');
+      if (btn) btn.classList.toggle('active', state.selectMode);
+      canvasContainer.classList.toggle('select-mode', state.selectMode);
+    }
+
+    // ── Canvas mouse delegation ────────────────────────────────────────────────
+
+    function onCanvasMouseDown(e) {
+      // Don't interfere with inline editing
+      if (e.target.closest('.node-notes-editor')) return;
+      if (e.target.closest('[contenteditable="true"]')) return;
+      // Ignore when space is held — panning takes priority
+      if (spaceHeld || e.button !== 0) return;
+
+      // ── Connect Mode: a source node is waiting — next node click completes it ──
+      if (state.connectMode.fromNodeId !== null) {
+        const nodeEl = e.target.closest('.node');
+        if (nodeEl && !e.target.closest('.node-connect-btn') && !e.target.closest('.node-toggle-btn')) {
+          e.preventDefault();
+          e.stopPropagation();
+          const nodeId = nodeEl.dataset.nodeId;
+          const { fromNodeId } = state.connectMode;
+          if (fromNodeId === nodeId) {
+            clearConnectSource();
+          } else {
+            const { fromPort, toPort } = pickBestPorts(fromNodeId, nodeId);
+            createConnection(fromNodeId, fromPort, nodeId, toPort);
+            clearConnectSource();
+          }
+        }
+        // Ignore ports, handles, empty canvas while waiting for a target
+        return;
+      }
+
+      const handleEl = e.target.closest('.resize-handle');
+      if (handleEl) {
+        e.preventDefault();
+        e.stopPropagation();
+        startResizing(e, handleEl.dataset.nodeId, handleEl.dataset.handle);
+        return;
+      }
+
+      const portEl = e.target.closest('.port');
+      if (portEl) {
+        e.preventDefault();
+        e.stopPropagation();
+        startConnecting(portEl.dataset.nodeId, portEl.dataset.port);
+        return;
+      }
+
+      const nodeEl = e.target.closest('.node');
+      if (nodeEl) {
+        e.preventDefault();
+        const nodeId = nodeEl.dataset.nodeId;
+
+        if (e.shiftKey) {
+          toggleNodeInSelection(nodeId);
+        } else if (state.selectedNodeIds.has(nodeId)) {
+          startDragging(e);
+        } else {
+          clearSelection();
+          addToSelection(nodeId);
+          startDragging(e);
+        }
+        return;
+      }
+
+      if (e.shiftKey) {
+        e.stopPropagation();
+        startRubberBand(e);
+      }
+      // non-shift empty canvas: bubble up to onContainerMouseDown which starts pan
+    }
+
+    // ── Drag (delta-based, supports multi) ────────────────────────────────────
+
+    let dragStartPositions = null;
+
+    function startDragging(e) {
+      const wc = toWorldCoords(e.clientX, e.clientY);
+      state.dragging.active = true;
+      state.dragging.lastX = wc.x;
+      state.dragging.lastY = wc.y;
+
+      dragStartPositions = {};
+      for (const nodeId of state.selectedNodeIds) {
+        const node = state.nodes[nodeId];
+        if (node) dragStartPositions[nodeId] = { x: node.x, y: node.y };
+      }
+    }
+
+    // ── Resize ────────────────────────────────────────────────────────────────
+
+    let resizeUndoSnapshot = null;
+
+    function startResizing(e, nodeId, handle) {
+      const node = state.nodes[nodeId];
+      if (!node || node.locked) return;
+      const wc = toWorldCoords(e.clientX, e.clientY);
+      const base = getMinDims(node.type);
+
+      resizeUndoSnapshot = { nodeId, x: node.x, y: node.y, width: node.width, height: node.height };
+
+      state.resizing.active = true;
+      state.resizing.nodeId = nodeId;
+      state.resizing.handle = handle;
+      state.resizing.startMouseX = wc.x;
+      state.resizing.startMouseY = wc.y;
+      state.resizing.startX = node.x;
+      state.resizing.startY = node.y;
+      state.resizing.startWidth = node.width;
+      state.resizing.startHeight = node.height;
+      state.resizing.minW = base.w;
+      state.resizing.minH = base.h;
+    }
+
+    function applyResize(dx, dy) {
+      const { nodeId, handle, startX, startWidth, minW } = state.resizing;
+      const node = state.nodes[nodeId];
+      if (!node) return;
+
+      let x = startX, w = startWidth;
+      if (handle.includes('r')) w = Math.max(minW, startWidth + dx);
+      if (handle.includes('l')) { w = Math.max(minW, startWidth - dx); x = startX + startWidth - w; }
+
+      node.x = x; node.width = w;
+      node.element.style.left = x + 'px';
+      node.element.style.width = w + 'px';
+      autoResizeNode(node);
+      updateConnectionsForNode(nodeId);
+    }
+
+    // ── Rubber-band ────────────────────────────────────────────────────────────
+
+    function startRubberBand(e) {
+      const wc = toWorldCoords(e.clientX, e.clientY);
+
+      const el = document.createElement('div');
+      el.className = 'rubber-band';
+      el.style.left = wc.x + 'px'; el.style.top = wc.y + 'px';
+      el.style.width = '0'; el.style.height = '0';
+      canvasNodes.appendChild(el);
+
+      state.rubberBand.active = true;
+      state.rubberBand.startX = wc.x;
+      state.rubberBand.startY = wc.y;
+      state.rubberBand.element = el;
+    }
+
+    function nodeIntersectsRect(node, rx, ry, rw, rh) {
+      return node.x < rx + rw && node.x + node.width > rx &&
+        node.y < ry + rh && node.y + node.height > ry;
+    }
+
+    // ── Palette drag ───────────────────────────────────────────────────────────
+
+    function onPaletteMouseDown(e) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+
+      const type = e.currentTarget.dataset.type;
+      const dims = NODE_DIMS[type] || NODE_DIMS.process;
+
+      const ghost = document.createElement('div');
+      ghost.className = 'drag-ghost';
+      ghost.style.width = dims.width + 'px';
+      ghost.style.height = dims.height + 'px';
+      ghost.style.left = (e.clientX - dims.width / 2) + 'px';
+      ghost.style.top = (e.clientY - dims.height / 2) + 'px';
+      ghost.textContent = getDefaultLabel(type);
+      document.body.appendChild(ghost);
+
+      state.pendingCreate.active = true;
+      state.pendingCreate.type = type;
+      state.pendingCreate.ghost = ghost;
+    }
+
+    // ── Edge auto-pan (used during connect and node drag) ─────────────────────
+
+    let autoPanRaf = null;
+    let lastMouseCX = 0;
+    let lastMouseCY = 0;
+
+    function getEdgePanDeltas(cx, cy) {
+      const ZONE = 80;
+      const MAX = 14;
+      const r = canvasContainer.getBoundingClientRect();
+      let dx = 0, dy = 0;
+      const l = cx - r.left, ri = r.right - cx;
+      const t = cy - r.top, b = r.bottom - cy;
+      if (l >= 0 && l < ZONE) dx = Math.ceil((1 - l / ZONE) * MAX);
+      if (ri >= 0 && ri < ZONE) dx = -Math.ceil((1 - ri / ZONE) * MAX);
+      if (t >= 0 && t < ZONE) dy = Math.ceil((1 - t / ZONE) * MAX);
+      if (b >= 0 && b < ZONE) dy = -Math.ceil((1 - b / ZONE) * MAX);
+      return { dx, dy };
+    }
+
+    function tickAutoPan() {
+      autoPanRaf = null;
+      const active = state.connecting.active || state.dragging.active;
+      if (!active) return;
+
+      const { dx, dy } = getEdgePanDeltas(lastMouseCX, lastMouseCY);
+      if (!dx && !dy) return;
+
+      applyPan(dx, dy);
+
+      // Keep the temp connection path updated after the world shifted
+      if (state.connecting.active && state.connecting.tempPath) {
+        const wc = toWorldCoords(lastMouseCX, lastMouseCY);
+        const from = getPortCenter(state.connecting.fromNodeId, state.connecting.fromPort);
+        const d = buildBezierPath(from, wc, state.connecting.fromPort, oppositePort(state.connecting.fromPort));
+        state.connecting.tempPath.setAttribute('d', d);
+      }
+
+      // Compensate the drag reference so nodes don't drift while the view pans
+      if (state.dragging.active) {
+        state.dragging.lastX -= dx / state.zoom;
+        state.dragging.lastY -= dy / state.zoom;
+      }
+
+      autoPanRaf = requestAnimationFrame(tickAutoPan);
+    }
+
+    function triggerAutoPan() {
+      if (!autoPanRaf) autoPanRaf = requestAnimationFrame(tickAutoPan);
+    }
+
+    function cancelAutoPan() {
+      if (autoPanRaf) { cancelAnimationFrame(autoPanRaf); autoPanRaf = null; }
+    }
+
+    // ── Global mouse move ──────────────────────────────────────────────────────
+
+    function onDocumentMouseMove(e) {
+      lastMouseCX = e.clientX;
+      lastMouseCY = e.clientY;
+
+      // Pan
+      if (state.panning.active) {
+        const dx = e.clientX - state.panning.lastX;
+        const dy = e.clientY - state.panning.lastY;
+        state.panning.lastX = e.clientX;
+        state.panning.lastY = e.clientY;
+        if (dx !== 0 || dy !== 0) state.panning.didMove = true;
+        applyPan(dx, dy);
+        return;
+      }
+
+      if (state.pendingCreate.active && state.pendingCreate.ghost) {
+        const g = state.pendingCreate.ghost;
+        g.style.left = (e.clientX - parseInt(g.style.width) / 2) + 'px';
+        g.style.top = (e.clientY - parseInt(g.style.height) / 2) + 'px';
+      }
+
+      if (state.resizing.active) {
+        const wc = toWorldCoords(e.clientX, e.clientY);
+        applyResize(wc.x - state.resizing.startMouseX, wc.y - state.resizing.startMouseY);
+      }
+
+      if (state.groupResize.active) {
+        const wc = toWorldCoords(e.clientX, e.clientY);
+        applyGroupResize(wc.x, wc.y);
+      }
+
+      if (state.dragging.active && state.selectedNodeIds.size > 0) {
+        const wc = toWorldCoords(e.clientX, e.clientY);
+        let dx = wc.x - state.dragging.lastX;
+        let dy = wc.y - state.dragging.lastY;
+        state.dragging.lastX = wc.x;
+        state.dragging.lastY = wc.y;
+
+        const snap = computeAlignSnap(dx, dy);
+        dx += snap.dx;
+        dy += snap.dy;
+
+        for (const nodeId of state.selectedNodeIds) {
+          const node = state.nodes[nodeId];
+          if (!node || node.locked) continue;
+          node.x += dx;
+          node.y += dy;
+          node.element.style.left = node.x + 'px';
+          node.element.style.top = node.y + 'px';
+          updateConnectionsForNode(nodeId);
+        }
+        if (state.groupBoxEl) {
+          const bb = getSelectionBBox();
+          if (bb) {
+            state.groupBoxEl.style.left = bb.x + 'px';
+            state.groupBoxEl.style.top = bb.y + 'px';
+          }
+        }
+        renderAlignGuides(snap.guides);
+      }
+
+      if (state.rubberBand.active && state.rubberBand.element) {
+        const wc = toWorldCoords(e.clientX, e.clientY);
+        const rx = Math.min(wc.x, state.rubberBand.startX);
+        const ry = Math.min(wc.y, state.rubberBand.startY);
+        const rw = Math.abs(wc.x - state.rubberBand.startX);
+        const rh = Math.abs(wc.y - state.rubberBand.startY);
+
+        const el = state.rubberBand.element;
+        el.style.left = rx + 'px'; el.style.top = ry + 'px';
+        el.style.width = rw + 'px'; el.style.height = rh + 'px';
+
+        for (const node of Object.values(state.nodes)) {
+          node.element.classList.toggle('rb-highlight', nodeIntersectsRect(node, rx, ry, rw, rh));
+        }
+      }
+
+      if (state.connecting.active && state.connecting.tempPath) {
+        const wc = toWorldCoords(e.clientX, e.clientY);
+        const from = getPortCenter(state.connecting.fromNodeId, state.connecting.fromPort);
+        const d = buildBezierPath(from, wc,
+          state.connecting.fromPort, oppositePort(state.connecting.fromPort));
+        state.connecting.tempPath.setAttribute('d', d);
+      }
+
+      if (state.reanchor.active && state.reanchor.tempPath) {
+        const wc = toWorldCoords(e.clientX, e.clientY);
+        const conn = state.connections[state.reanchor.connId];
+        if (conn) {
+          let d;
+          if (state.reanchor.end === 'to') {
+            const from = getPortCenter(conn.fromNodeId, conn.fromPort);
+            d = buildBezierPath(from, wc, conn.fromPort, oppositePort(conn.fromPort));
+          } else {
+            const to = getPortCenter(conn.toNodeId, conn.toPort);
+            d = buildBezierPath(wc, to, oppositePort(conn.toPort), conn.toPort);
+          }
+          state.reanchor.tempPath.setAttribute('d', d);
+        }
+      }
+
+      if (state.waypointEdit.active) {
+        const w = state.waypointEdit;
+        const conn = state.connections[w.connId];
+        if (conn && conn.waypoints[w.index]) {
+          const wc = toWorldCoords(e.clientX, e.clientY);
+          conn.waypoints[w.index] = { x: wc.x, y: wc.y };
+          if (Math.abs(e.clientX - w.startCX) > 3 || Math.abs(e.clientY - w.startCY) > 3) w.moved = true;
+          updateConnection(w.connId);
+        }
+      }
+
+      if (state.connecting.active || state.dragging.active || state.reanchor.active || state.waypointEdit.active) {
+        const { dx, dy } = getEdgePanDeltas(e.clientX, e.clientY);
+        if (dx || dy) triggerAutoPan(); else cancelAutoPan();
+      }
+    }
+
+    // ── Global mouse up ────────────────────────────────────────────────────────
+
+    function onDocumentMouseUp(e) {
+      cancelAutoPan();
+      clearAlignGuides();
+      // End pan
+      if (state.panning.active) {
+        const didMove = state.panning.didMove;
+        state.panning.active = false;
+        state.panning.didMove = false;
+        canvasContainer.classList.remove('panning');
+        if (spaceHeld) canvasContainer.classList.add('space-held');
+        // Empty-canvas click (no drag) deselects; an actual pan keeps the selection.
+        if (!didMove && !spaceHeld) clearSelection();
+        return;
+      }
+
+      // End resize
+      if (state.resizing.active) {
+        state.resizing.active = false;
+
+        if (resizeUndoSnapshot) {
+          const snap = resizeUndoSnapshot;
+          resizeUndoSnapshot = null;
+          const node = state.nodes[snap.nodeId];
+          if (node && (node.width !== snap.width || node.height !== snap.height ||
+            node.x !== snap.x || node.y !== snap.y)) {
+            pushUndo(() => {
+              const n = state.nodes[snap.nodeId];
+              if (!n) return;
+              n.x = snap.x; n.y = snap.y; n.width = snap.width; n.height = snap.height;
+              n.element.style.left = snap.x + 'px';
+              n.element.style.top = snap.y + 'px';
+              n.element.style.width = snap.width + 'px';
+              n.element.style.height = snap.height + 'px';
+              updateConnectionsForNode(snap.nodeId);
+            });
+          }
+        }
+        return;
+      }
+
+      // End group resize
+      if (state.groupResize.active) {
+        const snap = state.groupResize.startNodes;
+        state.groupResize.active = false;
+        state.groupResize.startNodes = null;
+        state.groupResize.startBox = null;
+
+        if (snap) {
+          const changed = Object.keys(snap).some(id => {
+            const n = state.nodes[id];
+            return n && (n.x !== snap[id].x || n.y !== snap[id].y ||
+              n.width !== snap[id].width || n.height !== snap[id].height);
+          });
+          if (changed) {
+            pushUndo(() => {
+              for (const id of Object.keys(snap)) {
+                const n = state.nodes[id];
+                if (!n) continue;
+                n.x = snap[id].x; n.y = snap[id].y;
+                n.width = snap[id].width; n.height = snap[id].height;
+                n.element.style.left = n.x + 'px';
+                n.element.style.top = n.y + 'px';
+                n.element.style.width = n.width + 'px';
+                n.element.style.height = n.height + 'px';
+                updateConnectionsForNode(id);
+              }
+              updateGroupResizeBox();
+            });
+          }
+        }
+        updateGroupResizeBox();
+        return;
+      }
+
+      // Palette drop
+      if (state.pendingCreate.active) {
+        if (state.pendingCreate.ghost) {
+          state.pendingCreate.ghost.remove();
+          state.pendingCreate.ghost = null;
+        }
+
+        const rect = canvasContainer.getBoundingClientRect();
+        const inside = e.clientX >= rect.left && e.clientX <= rect.right &&
+          e.clientY >= rect.top && e.clientY <= rect.bottom;
+
+        if (inside) {
+          const dims = NODE_DIMS[state.pendingCreate.type] || NODE_DIMS.process;
+          const wc = toWorldCoords(e.clientX, e.clientY);
+          const x = wc.x - dims.width / 2;
+          const y = wc.y - dims.height / 2;
+          clearSelection();
+          const node = createNode(state.pendingCreate.type, Math.max(0, x), Math.max(0, y));
+          addToSelection(node.id);
+
+          const nodeId = node.id;
+          pushUndo(() => {
+            state.selectedNodeIds.delete(nodeId);
+            deleteNode(nodeId);
+            renumberNodes();
+            updatePropsPanel();
+          });
+        }
+
+        state.pendingCreate.active = false;
+        state.pendingCreate.type = null;
+        return;
+      }
+
+      // End node drag — push undo if anything actually moved
+      if (state.dragging.active) {
+        state.dragging.active = false;
+
+        if (dragStartPositions) {
+          const moved = [];
+          for (const [nodeId, start] of Object.entries(dragStartPositions)) {
+            const node = state.nodes[nodeId];
+            if (node && (node.x !== start.x || node.y !== start.y)) {
+              moved.push({ nodeId, start, end: { x: node.x, y: node.y } });
+            }
+          }
+          if (moved.length > 0) {
+            const snapshot = moved;
+            pushUndo(() => {
+              for (const { nodeId, start } of snapshot) {
+                const node = state.nodes[nodeId];
+                if (!node) continue;
+                node.x = start.x; node.y = start.y;
+                node.element.style.left = start.x + 'px';
+                node.element.style.top = start.y + 'px';
+                updateConnectionsForNode(nodeId);
+              }
+            });
+          }
+          dragStartPositions = null;
+        }
+      }
+
+      // Finalize rubber-band
+      if (state.rubberBand.active) {
+        const wc = toWorldCoords(e.clientX, e.clientY);
+        const rx = Math.min(wc.x, state.rubberBand.startX);
+        const ry = Math.min(wc.y, state.rubberBand.startY);
+        const rw = Math.abs(wc.x - state.rubberBand.startX);
+        const rh = Math.abs(wc.y - state.rubberBand.startY);
+
+        for (const node of Object.values(state.nodes)) {
+          node.element.classList.remove('rb-highlight');
+          if (nodeIntersectsRect(node, rx, ry, rw, rh)) addToSelection(node.id);
+        }
+
+        state.rubberBand.element.remove();
+        state.rubberBand.element = null;
+        state.rubberBand.active = false;
+        updatePropsPanel();
+        return;
+      }
+
+      // Finalize connection
+      if (state.connecting.active) {
+        const portEl = e.target.closest('.port');
+        const toNodeId = portEl ? portEl.dataset.nodeId : null;
+        const toPort = portEl ? portEl.dataset.port : null;
+
+        if (toNodeId && toNodeId !== state.connecting.fromNodeId && toPort) {
+          // Both ends were chosen by hand (dragged dot → dropped dot), so anchor them.
+          createConnection(
+            state.connecting.fromNodeId, state.connecting.fromPort,
+            toNodeId, toPort, '', { from: true, to: true }
+          );
+        }
+
+        if (state.connecting.tempPath) {
+          state.connecting.tempPath.remove();
+          state.connecting.tempPath = null;
+        }
+
+        const sourceEl = state.nodes[state.connecting.fromNodeId]?.element;
+        if (sourceEl) sourceEl.classList.remove('connecting-source');
+        canvasContainer.classList.remove('connecting-active');
+
+        state.connecting.active = false;
+        state.connecting.fromNodeId = null;
+        state.connecting.fromPort = null;
+      }
+
+      // Finalize re-anchor of an existing connection's endpoint
+      if (state.reanchor.active) {
+        finalizeReanchor(e);
+      }
+
+      // Finalize waypoint move/add
+      if (state.waypointEdit.active) {
+        finalizeWaypointDrag();
+      }
+    }
+
+    // ── Connecting ─────────────────────────────────────────────────────────────
+
+    function startConnecting(nodeId, port) {
+      state.connecting.active = true;
+      state.connecting.fromNodeId = nodeId;
+      state.connecting.fromPort = port;
+
+      const node = state.nodes[nodeId];
+      if (node) node.element.classList.add('connecting-source');
+      canvasContainer.classList.add('connecting-active');
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.classList.add('temp-connection');
+      canvasSvg.appendChild(path);
+      state.connecting.tempPath = path;
+    }
+
+    function createConnection(fromNodeId, fromPort, toNodeId, toPort, label = '', anchored = null, waypoints = null) {
+      for (const c of Object.values(state.connections)) {
+        if (c.fromNodeId === fromNodeId && c.fromPort === fromPort &&
+          c.toNodeId === toNodeId && c.toPort === toPort) return;
+      }
+
+      const id = 'conn-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+      const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      hit.classList.add('connection-hit');
+      hit.dataset.connId = id;
+      canvasSvg.appendChild(hit);
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.classList.add('connection');
+      path.setAttribute('marker-end', 'url(#arrowhead)');
+      path.dataset.connId = id;
+      canvasSvg.appendChild(path);
+
+      hit.addEventListener('mouseenter', () => {
+        path.classList.add('hovered');
+        if (!path.classList.contains('selected')) {
+          path.setAttribute('marker-end', 'url(#arrowhead-selected)');
+        }
+      });
+      hit.addEventListener('mouseleave', () => {
+        path.classList.remove('hovered');
+        if (!path.classList.contains('selected')) {
+          path.setAttribute('marker-end', 'url(#arrowhead)');
+        }
+      });
+
+      const labelEl = document.createElement('div');
+      labelEl.className = 'conn-label';
+      labelEl.dataset.connId = id;
+      labelEl.addEventListener('mousedown', e => { e.stopPropagation(); });
+      labelEl.addEventListener('dblclick', e => { e.stopPropagation(); startConnLabelEdit(id); });
+      canvasNodes.appendChild(labelEl);
+
+      const conn = {
+        id, fromNodeId, fromPort, toNodeId, toPort, label,
+        fromAnchored: !!(anchored && anchored.from),
+        toAnchored: !!(anchored && anchored.to),
+        waypoints: Array.isArray(waypoints) ? waypoints.map(p => ({ x: p.x, y: p.y })) : [],
+        pathElement: path, hitElement: hit, labelElement: labelEl
+      };
+      state.connections[id] = conn;
+      renderConnLabel(conn);
+      updateConnection(id);
+      updateConnectionsForNode(fromNodeId);
+      updateConnectionsForNode(toNodeId);
+
+      pushUndo(() => deleteConnection(id));
+    }
+
+    function renderConnLabel(conn) {
+      if (!conn.labelElement) return;
+      conn.labelElement.textContent = conn.label || '';
+      conn.labelElement.classList.toggle('empty', !conn.label);
+    }
+
+    function startConnLabelEdit(connId) {
+      const conn = state.connections[connId];
+      if (!conn || !conn.labelElement) return;
+      const oldLabel = conn.label || '';
+      const input = document.createElement('textarea');
+      input.className = 'conn-label-editor';
+      input.value = oldLabel;
+      input.placeholder = 'Label…';
+      input.rows = 1;
+
+      conn.labelElement.textContent = '';
+      conn.labelElement.classList.remove('empty');
+      conn.labelElement.appendChild(input);
+      const autosize = () => { input.style.height = 'auto'; input.style.height = input.scrollHeight + 'px'; };
+      input.focus();
+      input.select();
+      autosize();
+
+      // A mousedown anywhere outside the editor commits it. This is more robust
+      // than relying on blur, since canvas/node handlers preventDefault() the
+      // mousedown (which would otherwise suppress the focus shift and the blur).
+      function onOutside(ev) {
+        if (!conn.labelElement.contains(ev.target)) input.blur();
+      }
+      document.addEventListener('mousedown', onOutside, true);
+
+      let done = false;
+      function commit() {
+        if (done) return;
+        done = true;
+        document.removeEventListener('mousedown', onOutside, true);
+        const newLabel = input.value.trim();
+        conn.label = newLabel;
+        renderConnLabel(conn);
+        updateConnection(connId);   // re-centre on the (possibly taller) label
+        if (newLabel !== oldLabel) {
+          pushUndo(() => {
+            const c = state.connections[connId];
+            if (!c) return;
+            c.label = oldLabel;
+            renderConnLabel(c);
+            updateConnection(connId);
+          });
+        }
+      }
+      input.addEventListener('blur', commit);
+      input.addEventListener('input', autosize);
+      input.addEventListener('keydown', e => {
+        e.stopPropagation();
+        // Enter inserts a newline (multi-line); click away or Escape to finish.
+        if (e.key === 'Escape') { input.value = oldLabel; input.blur(); }
+      });
+    }
+
+    // ── Port geometry ──────────────────────────────────────────────────────────
+
+    function getPortCenter(nodeId, port) {
+      const n = state.nodes[nodeId];
+      const pts = {
+        top: { x: n.x + n.width / 2, y: n.y },
+        right: { x: n.x + n.width, y: n.y + n.height / 2 },
+        bottom: { x: n.x + n.width / 2, y: n.y + n.height },
+        left: { x: n.x, y: n.y + n.height / 2 }
+      };
+      return pts[port];
+    }
+
+    function oppositePort(port) {
+      return { top: 'bottom', bottom: 'top', left: 'right', right: 'left' }[port];
+    }
+
+    // Choose the closest pair of ports. A fixed port (when that end is anchored)
+    // constrains its side of the search so only the free end is auto-picked.
+    function pickBestPorts(fromNodeId, toNodeId, fixedFrom = null, fixedTo = null) {
+      const ports = ['top', 'right', 'bottom', 'left'];
+      const fromPorts = fixedFrom ? [fixedFrom] : ports;
+      const toPorts = fixedTo ? [fixedTo] : ports;
+      let best = null, minDist = Infinity;
+      for (const fp of fromPorts) {
+        for (const tp of toPorts) {
+          const f = getPortCenter(fromNodeId, fp);
+          const t = getPortCenter(toNodeId, tp);
+          const d = Math.hypot(t.x - f.x, t.y - f.y);
+          if (d < minDist) { minDist = d; best = { fromPort: fp, toPort: tp }; }
+        }
+      }
+      return best;
+    }
+
+    // ── Connect Mode ────────────────────────────────────────────────────────────
+
+    function activateConnectSource(nodeId) {
+      clearConnectSource();
+      state.connectMode.fromNodeId = nodeId;
+      state.nodes[nodeId]?.element.classList.add('connect-source');
+      canvasContainer.classList.add('connect-mode');
+    }
+
+    function clearConnectSource() {
+      if (state.connectMode.fromNodeId) {
+        state.nodes[state.connectMode.fromNodeId]?.element.classList.remove('connect-source');
+        state.connectMode.fromNodeId = null;
+      }
+      canvasContainer.classList.remove('connect-mode');
+    }
+
+    // ── Bezier paths ───────────────────────────────────────────────────────────
+
+    function buildBezierPath(from, to, fromPort, toPort, fanInfo = null, opts = null) {
+      const tp = toPort || oppositePort(fromPort);
+
+      // Perpendicular offset so multiple connections sharing a port don't overlap.
+      const perp = {
+        top: { x: 1, y: 0 },
+        bottom: { x: 1, y: 0 },
+        left: { x: 0, y: 1 },
+        right: { x: 0, y: 1 }
+      };
+      const SPACING = 10;
+      let fromOff = 0, toOff = 0;
+      if (fanInfo) {
+        const { fromIndex, fromCount, toIndex, toCount } = fanInfo;
+        fromOff = (fromIndex - (fromCount - 1) / 2) * SPACING;
+        toOff = (toIndex - (toCount - 1) / 2) * SPACING;
+      }
+      const fStart = {
+        x: from.x + perp[fromPort].x * fromOff,
+        y: from.y + perp[fromPort].y * fromOff
+      };
+      const tEnd = {
+        x: to.x + perp[tp].x * toOff,
+        y: to.y + perp[tp].y * toOff
+      };
+
+      const standard = composeBezier(fStart, tEnd, fromPort, tp, 0, 0);
+
+      // No-obstacle path (used for temp drag and as fallback)
+      const obstacles = opts && opts.obstacles;
+      if (!obstacles || obstacles.length === 0) return standard;
+      if (!pathHitsObstacles(standard, obstacles)) return standard;
+
+      // Try perpendicular bow detours, alternating sides, increasing magnitude.
+      const mags = [60, 120, 200, 300, 420, 560];
+      for (const mag of mags) {
+        for (const side of [1, -1]) {
+          const detour = composeBezier(fStart, tEnd, fromPort, tp, side, mag);
+          if (!pathHitsObstacles(detour, obstacles)) return detour;
+        }
+      }
+      return standard;
+    }
+
+    function composeBezier(fStart, tEnd, fromPort, tp, bowSide, bowMag) {
+      const dx = Math.abs(tEnd.x - fStart.x);
+      const dy = Math.abs(tEnd.y - fStart.y);
+      const offset = Math.max(60, (dx + dy) * 0.3);
+
+      const portVec = {
+        top: { cx: 0, cy: -offset },
+        right: { cx: offset, cy: 0 },
+        bottom: { cx: 0, cy: offset },
+        left: { cx: -offset, cy: 0 }
+      };
+
+      let c1 = { x: fStart.x + portVec[fromPort].cx, y: fStart.y + portVec[fromPort].cy };
+      let c2 = { x: tEnd.x + portVec[tp].cx, y: tEnd.y + portVec[tp].cy };
+
+      if (bowMag) {
+        const vx = tEnd.x - fStart.x;
+        const vy = tEnd.y - fStart.y;
+        const len = Math.hypot(vx, vy) || 1;
+        // perpendicular unit (rotated +90deg)
+        const px = -vy / len;
+        const py = vx / len;
+        const bx = px * bowSide * bowMag;
+        const by = py * bowSide * bowMag;
+        c1 = { x: c1.x + bx, y: c1.y + by };
+        c2 = { x: c2.x + bx, y: c2.y + by };
+      }
+
+      return `M ${fStart.x} ${fStart.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${tEnd.x} ${tEnd.y}`;
+    }
+
+    let __collisionProbePath = null;
+    function getCollisionProbe() {
+      if (!__collisionProbePath || !__collisionProbePath.isConnected) {
+        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        p.setAttribute('fill', 'none');
+        p.style.visibility = 'hidden';
+        p.style.pointerEvents = 'none';
+        canvasSvg.appendChild(p);
+        __collisionProbePath = p;
+      }
+      return __collisionProbePath;
+    }
+
+    function pathHitsObstacles(d, obstacles, padding = 6) {
+      const probe = getCollisionProbe();
+      probe.setAttribute('d', d);
+      let totalLen = 0;
+      try { totalLen = probe.getTotalLength(); } catch (_) { return false; }
+      if (!totalLen) return false;
+      const step = 6;
+      const N = Math.max(20, Math.ceil(totalLen / step));
+      // Skip first/last samples so we don't trip on the source/target port radii.
+      const skip = 2;
+      for (let i = skip; i <= N - skip; i++) {
+        const t = i / N;
+        const p = probe.getPointAtLength(t * totalLen);
+        for (const n of obstacles) {
+          if (p.x >= n.x - padding && p.x <= n.x + n.width + padding &&
+            p.y >= n.y - padding && p.y <= n.y + n.height + padding) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    function fanInfoForConnection(connId) {
+      const conn = state.connections[connId];
+      if (!conn) return null;
+      const fromSiblings = Object.values(state.connections)
+        .filter(c => c.fromNodeId === conn.fromNodeId && c.fromPort === conn.fromPort)
+        .map(c => c.id).sort();
+      const toSiblings = Object.values(state.connections)
+        .filter(c => c.toNodeId === conn.toNodeId && c.toPort === conn.toPort)
+        .map(c => c.id).sort();
+      return {
+        fromIndex: fromSiblings.indexOf(connId),
+        fromCount: fromSiblings.length,
+        toIndex: toSiblings.indexOf(connId),
+        toCount: toSiblings.length
+      };
+    }
+
+    // ── Update connections ─────────────────────────────────────────────────────
+
+    function updateConnection(connId) {
+      const conn = state.connections[connId];
+      if (!conn) return;
+      const wps = conn.waypoints || [];
+      let d;
+
+      if (wps.length) {
+        // Waypoint mode: straight segments. Each end attaches to its node's
+        // border pointing toward the nearest waypoint (not a fixed side).
+        const start = nodeBorderToward(conn.fromNodeId, wps[0]);
+        const end = nodeBorderToward(conn.toNodeId, wps[wps.length - 1]);
+        conn.renderStart = start;
+        conn.renderEnd = end;
+        const pts = [start, ...wps, end];
+        d = 'M ' + pts.map(p => `${p.x} ${p.y}`).join(' L ');
+      } else {
+        // Default mode: smooth bezier between cardinal ports.
+        // Anchored ends keep their hand-picked port; only free ends auto-route.
+        const best = pickBestPorts(
+          conn.fromNodeId, conn.toNodeId,
+          conn.fromAnchored ? conn.fromPort : null,
+          conn.toAnchored ? conn.toPort : null
+        );
+        if (best) { conn.fromPort = best.fromPort; conn.toPort = best.toPort; }
+        const from = getPortCenter(conn.fromNodeId, conn.fromPort);
+        const to = getPortCenter(conn.toNodeId, conn.toPort);
+        conn.renderStart = from;
+        conn.renderEnd = to;
+        const fanInfo = fanInfoForConnection(connId);
+        const obstacles = obstacleNodesFor(conn.fromNodeId, conn.toNodeId);
+        d = buildBezierPath(from, to, conn.fromPort, conn.toPort, fanInfo, { obstacles });
+      }
+
+      conn.pathElement.setAttribute('d', d);
+      if (conn.hitElement) conn.hitElement.setAttribute('d', d);
+
+      if (conn.labelElement) {
+        const mid = pathMidpointFromD(d);
+        if (mid) {
+          conn.labelElement.style.left = mid.x + 'px';
+          conn.labelElement.style.top = mid.y + 'px';
+        }
+      }
+
+      if (connId === state.selectedConnId) positionConnEndpoints(conn);
+    }
+
+    // Point on a node's border along the ray from its center toward `target`.
+    function nodeBorderToward(nodeId, target) {
+      const n = state.nodes[nodeId];
+      if (!n) return { x: target.x, y: target.y };
+      const cx = n.x + n.width / 2, cy = n.y + n.height / 2;
+      const dx = target.x - cx, dy = target.y - cy;
+      if (dx === 0 && dy === 0) return { x: cx, y: cy };
+      const hw = n.width / 2, hh = n.height / 2;
+      const scale = 1 / Math.max(Math.abs(dx) / hw, Math.abs(dy) / hh);
+      return { x: cx + dx * scale, y: cy + dy * scale };
+    }
+
+    // [start, ...waypoints, end] in world coords, using last-rendered endpoints.
+    function connGeometryPoints(conn) {
+      const start = conn.renderStart || getPortCenter(conn.fromNodeId, conn.fromPort);
+      const end = conn.renderEnd || getPortCenter(conn.toNodeId, conn.toPort);
+      return [start, ...(conn.waypoints || []), end];
+    }
+
+    function obstacleNodesFor(fromNodeId, toNodeId) {
+      const out = [];
+      for (const n of Object.values(state.nodes)) {
+        if (n.id === fromNodeId || n.id === toNodeId) continue;
+        out.push(n);
+      }
+      return out;
+    }
+
+    function pathMidpointFromD(d) {
+      const probe = getCollisionProbe();
+      probe.setAttribute('d', d);
+      try {
+        const len = probe.getTotalLength();
+        if (!len) return null;
+        return probe.getPointAtLength(len / 2);
+      } catch (_) { return null; }
+    }
+
+    function bezierMidpoint(from, to, fromPort, toPort, fanInfo) {
+      const tp = toPort || oppositePort(fromPort);
+      const perp = {
+        top: { x: 1, y: 0 }, bottom: { x: 1, y: 0 },
+        left: { x: 0, y: 1 }, right: { x: 0, y: 1 }
+      };
+      const SPACING = 10;
+      let fromOff = 0, toOff = 0;
+      if (fanInfo) {
+        fromOff = (fanInfo.fromIndex - (fanInfo.fromCount - 1) / 2) * SPACING;
+        toOff = (fanInfo.toIndex - (fanInfo.toCount - 1) / 2) * SPACING;
+      }
+      const fStart = { x: from.x + perp[fromPort].x * fromOff, y: from.y + perp[fromPort].y * fromOff };
+      const tEnd = { x: to.x + perp[tp].x * toOff, y: to.y + perp[tp].y * toOff };
+
+      const dx = Math.abs(tEnd.x - fStart.x);
+      const dy = Math.abs(tEnd.y - fStart.y);
+      const offset = Math.max(60, (dx + dy) * 0.3);
+      const pv = {
+        top: { cx: 0, cy: -offset },
+        right: { cx: offset, cy: 0 },
+        bottom: { cx: 0, cy: offset },
+        left: { cx: -offset, cy: 0 }
+      };
+      const c1 = { x: fStart.x + pv[fromPort].cx, y: fStart.y + pv[fromPort].cy };
+      const c2 = { x: tEnd.x + pv[tp].cx, y: tEnd.y + pv[tp].cy };
+      const t = 0.5;
+      const mt = 1 - t;
+      return {
+        x: mt * mt * mt * fStart.x + 3 * mt * mt * t * c1.x + 3 * mt * t * t * c2.x + t * t * t * tEnd.x,
+        y: mt * mt * mt * fStart.y + 3 * mt * mt * t * c1.y + 3 * mt * t * t * c2.y + t * t * t * tEnd.y
+      };
+    }
+
+    function updateConnectionsForNode(nodeId) {
+      const movedNode = state.nodes[nodeId];
+      for (const conn of Object.values(state.connections)) {
+        if (conn.fromNodeId === nodeId || conn.toNodeId === nodeId) {
+          updateConnection(conn.id);
+          continue;
+        }
+        // A non-endpoint connection may need re-routing if the moved node now
+        // intersects its current path (or it could relax now that the node has moved away).
+        if (movedNode && connectionMayBeAffectedBy(conn, movedNode)) {
+          updateConnection(conn.id);
+        }
+      }
+    }
+
+    function connectionMayBeAffectedBy(conn, node) {
+      const path = conn.pathElement;
+      if (!path) return false;
+      let bb;
+      try { bb = path.getBBox(); } catch (_) { return true; }
+      const pad = 40;
+      return !(node.x > bb.x + bb.width + pad ||
+        node.x + node.width < bb.x - pad ||
+        node.y > bb.y + bb.height + pad ||
+        node.y + node.height < bb.y - pad);
+    }
+
+    // ── Selection ──────────────────────────────────────────────────────────────
+
+    function addToSelection(nodeId) {
+      const node = state.nodes[nodeId];
+      if (!node) return;
+      state.selectedNodeIds.add(nodeId);
+      node.element.classList.add('selected');
+      updatePropsPanel();
+      updateGroupResizeBox();
+      refreshConnectedHighlight();
+    }
+
+    function refreshConnectedHighlight() {
+      for (const n of Object.values(state.nodes)) {
+        n.element.classList.remove('connected-highlight', 'dimmed');
+      }
+      for (const c of Object.values(state.connections)) {
+        c.pathElement.classList.remove('connected-highlight', 'dimmed');
+      }
+      if (state.selectedNodeIds.size === 0) return;
+
+      const reachable = new Set(state.selectedNodeIds);
+      const edgeIds = new Set();
+
+      // Upstream BFS: only follow incoming edges (parents, grandparents, …).
+      const upQueue = [...state.selectedNodeIds];
+      while (upQueue.length) {
+        const id = upQueue.shift();
+        for (const c of Object.values(state.connections)) {
+          if (c.toNodeId !== id) continue;
+          edgeIds.add(c.id);
+          const other = c.fromNodeId;
+          if (!reachable.has(other)) {
+            reachable.add(other);
+            upQueue.push(other);
+          }
+        }
+      }
+
+      // Downstream BFS: only follow outgoing edges (children, grandchildren, …).
+      const downQueue = [...state.selectedNodeIds];
+      while (downQueue.length) {
+        const id = downQueue.shift();
+        for (const c of Object.values(state.connections)) {
+          if (c.fromNodeId !== id) continue;
+          edgeIds.add(c.id);
+          const other = c.toNodeId;
+          if (!reachable.has(other)) {
+            reachable.add(other);
+            downQueue.push(other);
+          }
+        }
+      }
+
+      if (edgeIds.size === 0) return;
+
+      for (const id of reachable) {
+        if (state.selectedNodeIds.has(id)) continue;
+        const n = state.nodes[id];
+        if (n) n.element.classList.add('connected-highlight');
+      }
+      for (const eid of edgeIds) {
+        const c = state.connections[eid];
+        if (c) c.pathElement.classList.add('connected-highlight');
+      }
+
+      for (const [id, n] of Object.entries(state.nodes)) {
+        if (!reachable.has(id)) n.element.classList.add('dimmed');
+      }
+      for (const c of Object.values(state.connections)) {
+        if (!edgeIds.has(c.id)) c.pathElement.classList.add('dimmed');
+      }
+    }
+
+    function toggleNodeInSelection(nodeId) {
+      if (state.selectedNodeIds.has(nodeId)) {
+        state.selectedNodeIds.delete(nodeId);
+        const node = state.nodes[nodeId];
+        if (node) node.element.classList.remove('selected');
+      } else {
+        addToSelection(nodeId);
+      }
+      updatePropsPanel();
+      updateGroupResizeBox();
+      refreshConnectedHighlight();
+    }
+
+    function selectConnection(connId) {
+      clearSelection();
+      state.selectedConnId = connId;
+      const conn = state.connections[connId];
+      if (!conn) return;
+      conn.pathElement.classList.add('selected');
+      conn.pathElement.setAttribute('marker-end', 'url(#arrowhead-selected)');
+      showConnEndpoints(conn);
+    }
+
+    // ── Connection endpoint handles (re-anchoring) ───────────────────────────────
+
+    function showConnEndpoints(conn) {
+      hideConnEndpoints();
+      connEndpointEls = {};
+      for (const end of ['from', 'to']) {
+        const dot = document.createElement('div');
+        dot.className = 'conn-endpoint';
+        dot.dataset.end = end;
+        dot.title = 'Drag onto a node to re-anchor this end';
+        dot.addEventListener('mousedown', e => startReanchor(e, end));
+        canvasNodes.appendChild(dot);
+        connEndpointEls[end] = dot;
+      }
+
+      // One draggable dot per existing waypoint (double-click to delete).
+      connWaypointEls = (conn.waypoints || []).map((wp, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'conn-endpoint conn-waypoint';
+        dot.title = 'Drag to move · double-click to remove';
+        dot.addEventListener('mousedown', e => startWaypointDrag(e, i, false));
+        dot.addEventListener('dblclick', e => { e.preventDefault(); e.stopPropagation(); removeWaypoint(conn.id, i); });
+        canvasNodes.appendChild(dot);
+        return dot;
+      });
+
+      // One hollow "add" dot at each segment midpoint (drag out to bend the line).
+      const segCount = connGeometryPoints(conn).length - 1;
+      connAdderEls = [];
+      for (let i = 0; i < segCount; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'conn-adder';
+        dot.title = 'Drag to add a bend point';
+        dot.addEventListener('mousedown', e => startWaypointDrag(e, i, true));
+        canvasNodes.appendChild(dot);
+        connAdderEls.push(dot);
+      }
+
+      positionConnEndpoints(conn);
+    }
+
+    function hideConnEndpoints() {
+      if (connEndpointEls) {
+        connEndpointEls.from?.remove();
+        connEndpointEls.to?.remove();
+        connEndpointEls = null;
+      }
+      connWaypointEls.forEach(el => el.remove());
+      connWaypointEls = [];
+      connAdderEls.forEach(el => el.remove());
+      connAdderEls = [];
+    }
+
+    function setHandlePos(el, p) {
+      if (el && p) { el.style.left = p.x + 'px'; el.style.top = p.y + 'px'; }
+    }
+
+    function positionConnEndpoints(conn) {
+      if (!conn) return;
+      const pts = connGeometryPoints(conn);
+      if (connEndpointEls) {
+        setHandlePos(connEndpointEls.from, pts[0]);
+        setHandlePos(connEndpointEls.to, pts[pts.length - 1]);
+      }
+      const wps = conn.waypoints || [];
+      for (let i = 0; i < connWaypointEls.length; i++) setHandlePos(connWaypointEls[i], wps[i]);
+      for (let i = 0; i < connAdderEls.length; i++) {
+        const a = pts[i], b = pts[i + 1];
+        if (a && b) setHandlePos(connAdderEls[i], { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+      }
+    }
+
+    // ── Waypoints (bend points) ──────────────────────────────────────────────────
+
+    function startWaypointDrag(e, index, isNew) {
+      e.preventDefault();
+      e.stopPropagation();
+      const connId = state.selectedConnId;
+      const conn = state.connections[connId];
+      if (!conn) return;
+      conn.waypoints = conn.waypoints || [];
+
+      const wc = toWorldCoords(e.clientX, e.clientY);
+      const beforeWps = conn.waypoints.map(p => ({ x: p.x, y: p.y }));
+      if (isNew) conn.waypoints.splice(index, 0, { x: wc.x, y: wc.y });
+
+      state.waypointEdit = {
+        active: true, connId, index, isNew, beforeWps,
+        startCX: e.clientX, startCY: e.clientY, moved: false
+      };
+
+      updateConnection(connId);
+      // Only a new point changes the handle count; rebuild then. Rebuilding on an
+      // existing-point press would swap the dot element and suppress its dblclick.
+      if (isNew) showConnEndpoints(conn);
+    }
+
+    function removeWaypoint(connId, index) {
+      const conn = state.connections[connId];
+      if (!conn || !conn.waypoints) return;
+      const beforeWps = conn.waypoints.map(p => ({ x: p.x, y: p.y }));
+      conn.waypoints.splice(index, 1);
+      updateConnection(connId);
+      if (connId === state.selectedConnId) showConnEndpoints(conn);
+      pushUndo(() => {
+        const c = state.connections[connId];
+        if (!c) return;
+        c.waypoints = beforeWps.map(p => ({ x: p.x, y: p.y }));
+        updateConnection(connId);
+        if (connId === state.selectedConnId) showConnEndpoints(c);
+      });
+    }
+
+    function finalizeWaypointDrag() {
+      const w = state.waypointEdit;
+      state.waypointEdit = { active: false };
+      const conn = state.connections[w.connId];
+      if (!conn) return;
+
+      // A click that barely moved on an "add" handle shouldn't litter the path.
+      if (w.isNew && !w.moved) {
+        conn.waypoints.splice(w.index, 1);
+        updateConnection(w.connId);
+        if (w.connId === state.selectedConnId) showConnEndpoints(conn);
+        return;
+      }
+      // An existing point that wasn't actually moved: nothing changed, no undo step.
+      if (!w.moved) return;
+
+      const beforeWps = w.beforeWps;
+      pushUndo(() => {
+        const c = state.connections[w.connId];
+        if (!c) return;
+        c.waypoints = beforeWps.map(p => ({ x: p.x, y: p.y }));
+        updateConnection(w.connId);
+        if (w.connId === state.selectedConnId) showConnEndpoints(c);
+      });
+    }
+
+    function startReanchor(e, end) {
+      e.preventDefault();
+      e.stopPropagation();
+      const connId = state.selectedConnId;
+      const conn = state.connections[connId];
+      if (!conn) return;
+
+      state.reanchor.active = true;
+      state.reanchor.connId = connId;
+      state.reanchor.end = end;
+      state.reanchor.before = {
+        nodeId: end === 'from' ? conn.fromNodeId : conn.toNodeId,
+        port: end === 'from' ? conn.fromPort : conn.toPort,
+        anchored: end === 'from' ? conn.fromAnchored : conn.toAnchored
+      };
+
+      connEndpointEls?.[end]?.classList.add('dragging');
+      canvasContainer.classList.add('connecting-active');
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.classList.add('temp-connection');
+      canvasSvg.appendChild(path);
+      state.reanchor.tempPath = path;
+    }
+
+    function finalizeReanchor(e) {
+      const conn = state.connections[state.reanchor.connId];
+      const end = state.reanchor.end;
+      const before = state.reanchor.before;
+
+      if (state.reanchor.tempPath) { state.reanchor.tempPath.remove(); state.reanchor.tempPath = null; }
+      connEndpointEls?.[end]?.classList.remove('dragging');
+      canvasContainer.classList.remove('connecting-active');
+      state.reanchor.active = false;
+
+      if (!conn) { state.reanchor.connId = null; state.reanchor.end = null; state.reanchor.before = null; return; }
+
+      // Resolve the drop target: a dot anchors to an exact port; a node body
+      // retargets that end (and lets it auto-route); anywhere else cancels.
+      const portEl = e.target.closest('.port');
+      const nodeEl = e.target.closest('.node');
+      let newNodeId = null, newPort = null, anchored = false;
+      if (portEl) {
+        newNodeId = portEl.dataset.nodeId;
+        newPort = portEl.dataset.port;
+        anchored = true;
+      } else if (nodeEl) {
+        newNodeId = nodeEl.dataset.nodeId;
+        anchored = false;
+      }
+
+      const otherNodeId = end === 'from' ? conn.toNodeId : conn.fromNodeId;
+      const changed = newNodeId &&
+        newNodeId !== otherNodeId &&
+        !(newNodeId === before.nodeId && newPort === before.port && anchored === before.anchored);
+
+      if (changed) {
+        const oldNodeId = before.nodeId;
+        const connId = conn.id;
+        applyReanchor(conn, end, newNodeId, newPort, anchored);
+        pushUndo(() => {
+          const c = state.connections[connId];
+          if (!c) return;
+          applyReanchor(c, end, before.nodeId, before.anchored ? before.port : null, before.anchored);
+          updateConnectionsForNode(before.nodeId);
+          updateConnectionsForNode(newNodeId);
+        });
+        updateConnectionsForNode(oldNodeId);
+        updateConnectionsForNode(newNodeId);
+      }
+
+      state.reanchor.connId = null;
+      state.reanchor.end = null;
+      state.reanchor.before = null;
+    }
+
+    function applyReanchor(conn, end, nodeId, port, anchored) {
+      if (end === 'from') {
+        conn.fromNodeId = nodeId;
+        conn.fromAnchored = anchored;
+        if (port) conn.fromPort = port;
+      } else {
+        conn.toNodeId = nodeId;
+        conn.toAnchored = anchored;
+        if (port) conn.toPort = port;
+      }
+      updateConnection(conn.id);
+    }
+
+    function clearSelection() {
+      for (const nodeId of state.selectedNodeIds) {
+        const node = state.nodes[nodeId];
+        if (node) node.element.classList.remove('selected');
+      }
+      state.selectedNodeIds.clear();
+
+      if (state.selectedConnId) {
+        const conn = state.connections[state.selectedConnId];
+        if (conn) {
+          conn.pathElement.classList.remove('selected');
+          conn.pathElement.setAttribute('marker-end', 'url(#arrowhead)');
+        }
+        state.selectedConnId = null;
+      }
+      hideConnEndpoints();
+
+      updatePropsPanel();
+      updateGroupResizeBox();
+      refreshConnectedHighlight();
+    }
+
+    function updateGroupResizeBox() {
+      if (state.groupResize.active) return;
+      if (state.groupBoxEl) { state.groupBoxEl.remove(); state.groupBoxEl = null; }
+      if (state.selectedNodeIds.size < 2) return;
+
+      const bb = getSelectionBBox();
+      if (!bb) return;
+
+      const box = document.createElement('div');
+      box.className = 'group-resize-box';
+      box.style.left = bb.x + 'px';
+      box.style.top = bb.y + 'px';
+      box.style.width = bb.w + 'px';
+      box.style.height = bb.h + 'px';
+
+      ['tl', 'tc', 'tr', 'rc', 'br', 'bc', 'bl', 'lc'].forEach(h => {
+        const rh = document.createElement('div');
+        rh.className = 'resize-handle';
+        rh.dataset.handle = h;
+        rh.style.pointerEvents = 'all';
+        rh.addEventListener('mousedown', e => onGroupHandleDown(e, h));
+        box.appendChild(rh);
+      });
+
+      canvasNodes.appendChild(box);
+      state.groupBoxEl = box;
+    }
+
+    function getSelectionBBox() {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, count = 0;
+      for (const id of state.selectedNodeIds) {
+        const n = state.nodes[id];
+        if (!n) continue;
+        if (n.x < minX) minX = n.x;
+        if (n.y < minY) minY = n.y;
+        if (n.x + n.width > maxX) maxX = n.x + n.width;
+        if (n.y + n.height > maxY) maxY = n.y + n.height;
+        count++;
+      }
+      if (!count) return null;
+      return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+    }
+
+    function onGroupHandleDown(e, handle) {
+      e.preventDefault();
+      e.stopPropagation();
+      const wc = toWorldCoords(e.clientX, e.clientY);
+      const startBox = getSelectionBBox();
+      if (!startBox) return;
+
+      const startNodes = {};
+      for (const id of state.selectedNodeIds) {
+        const n = state.nodes[id];
+        if (!n) continue;
+        startNodes[id] = { x: n.x, y: n.y, width: n.width, height: n.height };
+      }
+
+      state.groupResize.active = true;
+      state.groupResize.handle = handle;
+      state.groupResize.startMouseX = wc.x;
+      state.groupResize.startMouseY = wc.y;
+      state.groupResize.startBox = startBox;
+      state.groupResize.startNodes = startNodes;
+    }
+
+    function applyGroupResize(curX, curY) {
+      const { handle, startMouseX, startMouseY, startBox, startNodes } = state.groupResize;
+      const MIN = 20;
+
+      let nx = startBox.x, ny = startBox.y, nw = startBox.w, nh = startBox.h;
+      const dx = curX - startMouseX;
+      const dy = curY - startMouseY;
+
+      if (handle.includes('r')) nw = Math.max(MIN, startBox.w + dx);
+      if (handle.includes('b')) nh = Math.max(MIN, startBox.h + dy);
+      if (handle.includes('l')) { nw = Math.max(MIN, startBox.w - dx); nx = startBox.x + startBox.w - nw; }
+      if (handle.includes('t')) { nh = Math.max(MIN, startBox.h - dy); ny = startBox.y + startBox.h - nh; }
+
+      const sx = nw / startBox.w;
+      const sy = nh / startBox.h;
+
+      for (const id of Object.keys(startNodes)) {
+        const s = startNodes[id];
+        const node = state.nodes[id];
+        if (!node) continue;
+        const relX = (s.x - startBox.x) * sx;
+        const relY = (s.y - startBox.y) * sy;
+        const newW = Math.max(getContentMinDims(node).w, s.width * sx);
+        node.x = nx + relX;
+        node.y = ny + relY;
+        node.width = newW;
+        node.element.style.left = node.x + 'px';
+        node.element.style.top = node.y + 'px';
+        node.element.style.width = node.width + 'px';
+        autoResizeNode(node);
+        updateConnectionsForNode(id);
+      }
+
+      if (state.groupBoxEl) {
+        state.groupBoxEl.style.left = nx + 'px';
+        state.groupBoxEl.style.top = ny + 'px';
+        state.groupBoxEl.style.width = nw + 'px';
+        state.groupBoxEl.style.height = nh + 'px';
+      }
+    }
+
+    function updateSoleSelected() {
+      for (const node of Object.values(state.nodes)) {
+        node.element.classList.remove('sole-selected');
+      }
+      if (state.selectedNodeIds.size === 1) {
+        const nodeId = [...state.selectedNodeIds][0];
+        const node = state.nodes[nodeId];
+        if (node) node.element.classList.add('sole-selected');
+      }
+    }
+
+    function updatePropsPanel() {
+      const count = state.selectedNodeIds.size;
+
+      if (count === 0) {
+        propsForm.classList.remove('visible');
+        propsEmpty.style.display = '';
+        propsEmpty.textContent = 'Select a component to edit its properties.';
+      } else if (count === 1) {
+        const nodeId = [...state.selectedNodeIds][0];
+        const node = state.nodes[nodeId];
+        if (!node) return;
+        propsEmpty.style.display = 'none';
+        propsForm.classList.add('visible');
+        propsNodeType.textContent = node.type.charAt(0).toUpperCase() + node.type.slice(1);
+        propSeq.value = node.seq || '';
+        propLabel.value = node.label;
+        propNotes.value = node.notes;
+        propTeam.value = node.responseTeam;
+        const propLocked = document.getElementById('prop-locked');
+        if (propLocked) propLocked.checked = !!node.locked;
+        const propColor = document.getElementById('prop-color');
+        if (propColor) propColor.value = node.customColor || '#ffffff';
+        const dbSection = document.getElementById('props-db-section');
+        if (node.type === 'database') {
+          dbSection.classList.add('visible');
+          propDbServer.value = node.dbServer || '';
+        } else {
+          dbSection.classList.remove('visible');
+        }
+        const apiSection = document.getElementById('props-api-section');
+        if (node.type === 'api') {
+          apiSection.classList.add('visible');
+          propApiUrl.value = node.apiUrl || '';
+          propApiRequest.value = node.apiRequest || '';
+          propApiResponse.value = node.apiResponse || '';
+        } else {
+          apiSection.classList.remove('visible');
+        }
+        renderLinkRows();
+      } else {
+        propsForm.classList.remove('visible');
+        propsEmpty.style.display = '';
+        propsEmpty.textContent = `${count} components selected. Drag to move all, or press Delete to remove.`;
+      }
+
+      updateSoleSelected();
+    }
+
+    // ── Properties panel ───────────────────────────────────────────────────────
+
+    let propUndoSnapshot = null;
+
+    function onPropFocus() {
+      if (state.selectedNodeIds.size !== 1) return;
+      const nodeId = [...state.selectedNodeIds][0];
+      const node = state.nodes[nodeId];
+      if (!node) return;
+      propUndoSnapshot = {
+        nodeId,
+        seq: node.seq,
+        label: node.label,
+        notes: node.notes,
+        responseTeam: node.responseTeam,
+        links: JSON.parse(JSON.stringify(node.links || [])),
+        dbServer: node.dbServer || '',
+        apiUrl: node.apiUrl || '',
+        apiRequest: node.apiRequest || '',
+        apiResponse: node.apiResponse || '',
+      };
+    }
+
+    function onPropBlur() {
+      if (!propUndoSnapshot) return;
+      const snap = propUndoSnapshot;
+      propUndoSnapshot = null;
+      const node = state.nodes[snap.nodeId];
+      if (!node) return;
+
+      const changed = node.seq !== snap.seq ||
+        node.label !== snap.label ||
+        node.notes !== snap.notes ||
+        node.responseTeam !== snap.responseTeam ||
+        node.dbServer !== snap.dbServer ||
+        node.apiUrl !== snap.apiUrl ||
+        node.apiRequest !== snap.apiRequest ||
+        node.apiResponse !== snap.apiResponse ||
+        JSON.stringify(node.links) !== JSON.stringify(snap.links);
+      if (!changed) return;
+
+      const { seq, label, notes, responseTeam, links, dbServer, apiUrl, apiRequest, apiResponse, nodeId } = snap;
+      pushUndo(() => {
+        const n = state.nodes[nodeId];
+        if (!n) return;
+        n.seq = seq; n.label = label; n.notes = notes; n.responseTeam = responseTeam;
+        n.links = JSON.parse(JSON.stringify(links));
+        n.dbServer = dbServer;
+        n.apiUrl = apiUrl; n.apiRequest = apiRequest; n.apiResponse = apiResponse;
+        n.element.querySelector('.node-seq').textContent = seq || '';
+        setNodeLabelText(n.element, label);
+        setNodeDesc(n.element, notes);
+        renderNodeLinks(n.element, n.links);
+        if (n.type === 'database') setDbServer(n.element, n.dbServer);
+        if (n.type === 'api') { setApiUrl(n.element, n.apiUrl); setApiSections(n.element, n.apiRequest, n.apiResponse); }
+        autoResizeNode(n);
+        if (state.selectedNodeIds.has(nodeId)) { updatePropsPanel(); renderLinkRows(); }
+      });
+    }
+
+    function onPropsInput(field, value) {
+      if (state.selectedNodeIds.size !== 1) return;
+      const nodeId = [...state.selectedNodeIds][0];
+      const node = state.nodes[nodeId];
+      if (!node) return;
+      if (field === 'seq') {
+        const target = parseInt(value);
+        if (!(target > 0)) return;
+
+        const others = Object.values(state.nodes)
+          .filter(n => n.id !== node.id)
+          .sort((a, b) => (a.seq || 0) - (b.seq || 0));
+
+        const insertAt = Math.min(Math.max(target, 1), others.length + 1) - 1;
+        const ordered = others.slice();
+        ordered.splice(insertAt, 0, node);
+
+        ordered.forEach((n, i) => {
+          const newSeq = i + 1;
+          if (n.seq !== newSeq) {
+            n.seq = newSeq;
+            const seqEl = n.element.querySelector('.node-seq');
+            if (seqEl) seqEl.textContent = newSeq;
+          }
+        });
+        state.seqCounter = ordered.length;
+        return;
+      }
+      node[field] = value;
+      if (field === 'label') {
+        setNodeLabelText(node.element, value);
+      }
+      if (field === 'notes') {
+        setNodeDesc(node.element, value);
+      }
+      if (field === 'dbServer') {
+        setDbServer(node.element, value);
+      }
+      if (field === 'apiUrl') {
+        setApiUrl(node.element, value);
+      }
+      if (field === 'apiRequest' || field === 'apiResponse') {
+        setApiSections(node.element, node.apiRequest, node.apiResponse);
+      }
+      autoResizeNode(node);
+    }
+
+    // ── Links panel ────────────────────────────────────────────────────────────
+
+    function renderLinkRows() {
+      const list = document.getElementById('props-links-list');
+      if (!list) return;
+      list.innerHTML = '';
+      if (state.selectedNodeIds.size !== 1) return;
+      const node = state.nodes[[...state.selectedNodeIds][0]];
+      if (!node) return;
+
+      (node.links || []).forEach((link, i) => {
+        const row = document.createElement('div');
+        row.className = 'link-row';
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.className = 'link-name';
+        nameInput.placeholder = 'Label';
+        nameInput.value = link.name || '';
+        nameInput.addEventListener('focus', onPropFocus);
+        nameInput.addEventListener('blur', onPropBlur);
+        nameInput.addEventListener('input', () => {
+          node.links[i].name = nameInput.value;
+          renderNodeLinks(node.element, node.links);
+        });
+
+        const urlInput = document.createElement('input');
+        urlInput.type = 'text';
+        urlInput.placeholder = 'https://…';
+        urlInput.value = link.url || '';
+        urlInput.addEventListener('focus', onPropFocus);
+        urlInput.addEventListener('blur', onPropBlur);
+        urlInput.addEventListener('input', () => {
+          node.links[i].url = urlInput.value;
+          renderNodeLinks(node.element, node.links);
+          autoResizeNode(node);
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'link-del-btn';
+        delBtn.textContent = '×';
+        delBtn.title = 'Remove link';
+        delBtn.addEventListener('mousedown', e => e.preventDefault());
+        delBtn.addEventListener('click', () => {
+          const snapLinks = JSON.parse(JSON.stringify(node.links));
+          node.links.splice(i, 1);
+          renderNodeLinks(node.element, node.links);
+          autoResizeNode(node);
+          renderLinkRows();
+          pushUndo(() => {
+            node.links = JSON.parse(JSON.stringify(snapLinks));
+            renderNodeLinks(node.element, node.links);
+            autoResizeNode(node);
+            if (state.selectedNodeIds.has(node.id)) renderLinkRows();
+          });
+        });
+
+        row.appendChild(nameInput);
+        row.appendChild(urlInput);
+        row.appendChild(delBtn);
+        list.appendChild(row);
+      });
+    }
+
+    function onAddLink() {
+      if (state.selectedNodeIds.size !== 1) return;
+      const node = state.nodes[[...state.selectedNodeIds][0]];
+      if (!node) return;
+      const snapLinks = JSON.parse(JSON.stringify(node.links || []));
+      node.links = node.links || [];
+      node.links.push({ name: '', url: '' });
+      renderLinkRows();
+      const list = document.getElementById('props-links-list');
+      if (list && list.lastElementChild) {
+        const inputs = list.lastElementChild.querySelectorAll('input');
+        if (inputs[1]) inputs[1].focus();
+      }
+      pushUndo(() => {
+        node.links = JSON.parse(JSON.stringify(snapLinks));
+        renderNodeLinks(node.element, node.links);
+        autoResizeNode(node);
+        if (state.selectedNodeIds.has(node.id)) renderLinkRows();
+      });
+    }
+
+    // ── Delete ─────────────────────────────────────────────────────────────────
+
+    function deleteSelected() {
+      if (state.selectedNodeIds.size > 0) {
+        const ids = [...state.selectedNodeIds].filter(id => {
+          const n = state.nodes[id];
+          return n && !n.locked;
+        });
+        if (ids.length === 0) return;
+
+        const nodeSnaps = ids.map(snapshotNode);
+        const connSnaps = Object.values(state.connections)
+          .filter(c => ids.includes(c.fromNodeId) || ids.includes(c.toNodeId))
+          .map(snapshotConnection);
+
+        ids.forEach(id => state.selectedNodeIds.delete(id));
+        ids.forEach(id => deleteNode(id));
+        const seqsBefore = renumberNodes();
+        updatePropsPanel();
+        updateGroupResizeBox();
+
+        pushUndo(() => {
+          nodeSnaps.forEach(restoreNode);
+          connSnaps.forEach(restoreConnection);
+          restoreSeqs(seqsBefore);
+        });
+
+      } else if (state.selectedConnId) {
+        const conn = state.connections[state.selectedConnId];
+        const snap = snapshotConnection(conn);
+        deleteConnection(state.selectedConnId);
+        pushUndo(() => restoreConnection(snap));
+      }
+    }
+
+    function deleteNode(nodeId) {
+      const node = state.nodes[nodeId];
+      if (!node) return;
+
+      for (const connId of Object.keys(state.connections)) {
+        const c = state.connections[connId];
+        if (c.fromNodeId === nodeId || c.toNodeId === nodeId) {
+          deleteConnection(connId);
+        }
+      }
+
+      node.element.remove();
+      delete state.nodes[nodeId];
+      state.selectedNodeIds.delete(nodeId);
+    }
+
+    function renumberNodes() {
+      const nodes = Object.values(state.nodes).sort((a, b) => (a.seq || 0) - (b.seq || 0));
+      const before = nodes.map(n => ({ id: n.id, seq: n.seq }));
+      nodes.forEach((n, i) => {
+        const newSeq = i + 1;
+        n.seq = newSeq;
+        const seqEl = n.element.querySelector('.node-seq');
+        if (seqEl) seqEl.textContent = newSeq;
+      });
+      state.seqCounter = nodes.length;
+      if (state.selectedNodeIds.size === 1 && propSeq) {
+        const id = [...state.selectedNodeIds][0];
+        const n = state.nodes[id];
+        if (n) propSeq.value = n.seq || '';
+      }
+      return before;
+    }
+
+    function restoreSeqs(snaps) {
+      let max = 0;
+      for (const s of snaps) {
+        const n = state.nodes[s.id];
+        if (!n) continue;
+        n.seq = s.seq;
+        const seqEl = n.element.querySelector('.node-seq');
+        if (seqEl) seqEl.textContent = s.seq || '';
+        if ((s.seq || 0) > max) max = s.seq || 0;
+      }
+      state.seqCounter = max;
+      if (state.selectedNodeIds.size === 1 && propSeq) {
+        const id = [...state.selectedNodeIds][0];
+        const n = state.nodes[id];
+        if (n) propSeq.value = n.seq || '';
+      }
+    }
+
+    function deleteConnection(connId) {
+      const conn = state.connections[connId];
+      if (!conn) return;
+      conn.pathElement.remove();
+      if (conn.hitElement) conn.hitElement.remove();
+      if (conn.labelElement) conn.labelElement.remove();
+      delete state.connections[connId];
+
+      if (state.selectedConnId === connId) {
+        state.selectedConnId = null;
+        hideConnEndpoints();
+      }
+    }
+
+    // ── SVG click ──────────────────────────────────────────────────────────────
+
+    function onSvgDblClick(e) {
+      const path = e.target.closest('path.connection-hit, path.connection');
+      if (path && path.dataset.connId) {
+        e.preventDefault();
+        e.stopPropagation();
+        startConnLabelEdit(path.dataset.connId);
+      }
+    }
+
+    function onSvgClick(e) {
+      const path = e.target.closest('path.connection-hit, path.connection');
+      if (path && path.dataset.connId) selectConnection(path.dataset.connId);
+    }
+
+    // ── Keyboard ───────────────────────────────────────────────────────────────
+
+    function onKeyDown(e) {
+      const tag = document.activeElement.tagName;
+      const isInlineEdit = document.activeElement.contentEditable === 'true';
+
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || isInlineEdit) return;
+
+      if (e.code === 'Space' && !spaceHeld) {
+        e.preventDefault();
+        // Space pans the canvas — drop focus from any button (e.g. a toolbar
+        // button clicked earlier) so the spacebar doesn't also "press" it and
+        // fire its click on keyup (which was triggering Save SVG/PNG prompts).
+        const ae = document.activeElement;
+        if (ae && ae !== document.body && typeof ae.blur === 'function') ae.blur();
+        spaceHeld = true;
+        if (!state.panning.active) canvasContainer.classList.add('space-held');
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        undo();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && (e.key === 'z' || e.key === 'Z')))) {
+        e.preventDefault();
+        redo();
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        openSearch();
+        return;
+      }
+
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && state.selectedNodeIds.size > 0) {
+        e.preventDefault();
+        nudgeSelected(e.key, e.shiftKey ? 10 : 1);
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+        e.preventDefault();
+        copySelected();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+        e.preventDefault();
+        pasteClipboard();
+        return;
+      }
+      if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
+      if (e.key === 'Escape') {
+        if (state.connectMode.fromNodeId) {
+          clearConnectSource();
+        } else {
+          clearSelection();
+        }
+      }
+
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+        const shortcuts = {
+          s: 'start', e: 'end', p: 'process', d: 'decision',
+          n: 'note', b: 'database', a: 'api', q: 'queue'
+        };
+        const type = shortcuts[e.key.toLowerCase()];
+        if (type) {
+          e.preventDefault();
+          createNodeAtCursor(type);
+        }
+      }
+    }
+
+    function copySelected() {
+      if (state.selectedNodeIds.size === 0) return;
+      const ids = [...state.selectedNodeIds];
+      const nodes = ids.map(snapshotNode);
+      const connections = Object.values(state.connections)
+        .filter(c => ids.includes(c.fromNodeId) && ids.includes(c.toNodeId))
+        .map(c => ({
+          fromNodeId: c.fromNodeId, fromPort: c.fromPort,
+          toNodeId: c.toNodeId, toPort: c.toPort,
+          label: c.label || ''
+        }));
+      clipboard = { nodes, connections };
+    }
+
+    function pasteClipboard() {
+      if (!clipboard || !clipboard.nodes.length) return;
+
+      const rect = canvasContainer.getBoundingClientRect();
+      let cx = lastMouseCX, cy = lastMouseCY;
+      const inside = cx >= rect.left && cx <= rect.right &&
+        cy >= rect.top && cy <= rect.bottom;
+      if (!inside) {
+        cx = rect.left + rect.width / 2;
+        cy = rect.top + rect.height / 2;
+      }
+      const target = toWorldCoords(cx, cy);
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const s of clipboard.nodes) {
+        minX = Math.min(minX, s.x);
+        minY = Math.min(minY, s.y);
+        maxX = Math.max(maxX, s.x + s.width);
+        maxY = Math.max(maxY, s.y + s.height);
+      }
+      const groupCx = (minX + maxX) / 2;
+      const groupCy = (minY + maxY) / 2;
+      const offX = target.x - groupCx;
+      const offY = target.y - groupCy;
+
+      const idMap = {};
+      const newIds = [];
+
+      for (const s of clipboard.nodes) {
+        const node = createNode(s.type, Math.max(0, s.x + offX), Math.max(0, s.y + offY));
+        node.label = s.label;
+        node.notes = s.notes;
+        node.responseTeam = s.responseTeam;
+        node.links = JSON.parse(JSON.stringify(s.links || []));
+        node.dbServer = s.dbServer || '';
+        node.apiUrl = s.apiUrl || '';
+        node.apiRequest = s.apiRequest || '';
+        node.apiResponse = s.apiResponse || '';
+        node.collapsed = s.collapsed || false;
+        node.locked = s.locked || false;
+        if (node.locked) node.element.classList.add('node--locked');
+        node.customColor = s.customColor || null;
+        if (node.customColor) applyNodeColor(node);
+        node.width = s.width;
+        node.height = s.height;
+
+        node.element.style.width = s.width + 'px';
+        node.element.style.height = s.height + 'px';
+        const seqEl = node.element.querySelector('.node-seq');
+        if (seqEl) seqEl.textContent = node.seq || '';
+        setNodeLabelText(node.element, node.label);
+        setNodeDesc(node.element, node.notes);
+        renderNodeLinks(node.element, node.links);
+        if (node.type === 'database') setDbServer(node.element, node.dbServer);
+        if (node.type === 'api') { setApiUrl(node.element, node.apiUrl); setApiSections(node.element, node.apiRequest, node.apiResponse); }
+        const collapseBtn = node.element.querySelector('.node-toggle-btn');
+        if (node.collapsed && collapseBtn) {
+          node.element.classList.add('node--collapsed');
+          collapseBtn.textContent = '+';
+        } else {
+          node.collapsed = false;
+        }
+
+        idMap[s.id] = node.id;
+        newIds.push(node.id);
+      }
+
+      for (const c of clipboard.connections) {
+        const fromId = idMap[c.fromNodeId];
+        const toId = idMap[c.toNodeId];
+        const wps = (c.waypoints || []).map(p => ({ x: p.x + offX, y: p.y + offY }));
+        if (fromId && toId) createConnection(fromId, c.fromPort, toId, c.toPort, c.label || '',
+          { from: c.fromAnchored, to: c.toAnchored }, wps);
+      }
+
+      clearSelection();
+      newIds.forEach(id => addToSelection(id));
+
+      pushUndo(() => {
+        newIds.forEach(id => { state.selectedNodeIds.delete(id); deleteNode(id); });
+        renumberNodes();
+        updatePropsPanel();
+        updateGroupResizeBox();
+        refreshConnectedHighlight();
+      });
+    }
+
+    let searchEl = null;
+    let searchMatches = [];
+    let searchIndex = 0;
+
+    function openSearch() {
+      if (searchEl) { searchEl.querySelector('input').focus(); return; }
+      searchEl = document.createElement('div');
+      searchEl.className = 'search-bar';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = 'Find by label or notes…';
+      searchEl.appendChild(input);
+      const count = document.createElement('span');
+      count.className = 'search-count';
+      searchEl.appendChild(count);
+      document.body.appendChild(searchEl);
+      input.focus();
+
+      function runSearch() {
+        const q = input.value.trim().toLowerCase();
+        for (const n of Object.values(state.nodes)) {
+          n.element.classList.remove('connected-highlight', 'dimmed');
+        }
+        if (!q) { searchMatches = []; count.textContent = ''; return; }
+        searchMatches = Object.values(state.nodes).filter(n => {
+          return (n.label || '').toLowerCase().includes(q) ||
+            (n.notes || '').toLowerCase().includes(q);
+        });
+        if (searchMatches.length === 0) {
+          count.textContent = 'No matches';
+          for (const n of Object.values(state.nodes)) n.element.classList.add('dimmed');
+          return;
+        }
+        searchIndex = 0;
+        for (const n of Object.values(state.nodes)) {
+          if (searchMatches.includes(n)) n.element.classList.add('connected-highlight');
+          else n.element.classList.add('dimmed');
+        }
+        count.textContent = `1 / ${searchMatches.length}`;
+        focusMatch();
+      }
+
+      function focusMatch() {
+        if (searchMatches.length === 0) return;
+        const n = searchMatches[searchIndex];
+        clearSelection();
+        addToSelection(n.id);
+        const rect = canvasContainer.getBoundingClientRect();
+        const cx = n.x + n.width / 2;
+        const cy = n.y + n.height / 2;
+        state.pan.x = rect.width / 2 - cx * state.zoom;
+        state.pan.y = rect.height / 2 - cy * state.zoom;
+        applyTransform();
+        count.textContent = `${searchIndex + 1} / ${searchMatches.length}`;
+        for (const m of Object.values(state.nodes)) {
+          m.element.classList.remove('connected-highlight', 'dimmed');
+        }
+        for (const m of searchMatches) m.element.classList.add('connected-highlight');
+        for (const m of Object.values(state.nodes)) {
+          if (!searchMatches.includes(m)) m.element.classList.add('dimmed');
+        }
+      }
+
+      input.addEventListener('input', runSearch);
+      input.addEventListener('keydown', e => {
+        e.stopPropagation();
+        if (e.key === 'Escape') closeSearch();
+        if (e.key === 'Enter') {
+          if (searchMatches.length === 0) return;
+          searchIndex = (searchIndex + (e.shiftKey ? -1 : 1) + searchMatches.length) % searchMatches.length;
+          focusMatch();
+        }
+      });
+    }
+
+    function closeSearch() {
+      if (!searchEl) return;
+      searchEl.remove();
+      searchEl = null;
+      searchMatches = [];
+      for (const n of Object.values(state.nodes)) {
+        n.element.classList.remove('connected-highlight', 'dimmed');
+      }
+      refreshConnectedHighlight();
+    }
+
+    function toggleTheme() {
+      const dark = document.documentElement.classList.toggle('dark');
+      try { localStorage.setItem('flow:theme', dark ? 'dark' : 'light'); } catch { }
+      updateThemeButton();
+    }
+    function updateThemeButton() {
+      const btn = document.getElementById('btn-theme');
+      if (!btn) return;
+      const dark = document.documentElement.classList.contains('dark');
+      btn.textContent = dark ? 'Light' : 'Dark';
+      btn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+    }
+
+    function applyNodeColor(node) {
+      if (!node || !node.element) return;
+      const el = node.element;
+      if (node.customColor) {
+        el.style.setProperty('--node-bg', node.customColor);
+        el.classList.add('node--custom-color');
+      } else {
+        el.style.removeProperty('--node-bg');
+        el.classList.remove('node--custom-color');
+      }
+    }
+
+    const ALIGN_THRESHOLD = 5;
+    let alignGuideEls = [];
+
+    function computeAlignSnap(dx, dy) {
+      const selected = [...state.selectedNodeIds].map(id => state.nodes[id]).filter(n => n && !n.locked);
+      if (selected.length === 0) return { dx: 0, dy: 0, guides: [] };
+
+      const others = Object.values(state.nodes).filter(n => !state.selectedNodeIds.has(n.id));
+      if (others.length === 0) return { dx: 0, dy: 0, guides: [] };
+
+      let bestDx = 0, bestDy = 0;
+      let bestAbsX = ALIGN_THRESHOLD + 1, bestAbsY = ALIGN_THRESHOLD + 1;
+      const guides = [];
+
+      for (const sel of selected) {
+        const nx = sel.x + dx, ny = sel.y + dy;
+        const selXs = [nx, nx + sel.width / 2, nx + sel.width];
+        const selYs = [ny, ny + sel.height / 2, ny + sel.height];
+
+        for (const o of others) {
+          const oxs = [o.x, o.x + o.width / 2, o.x + o.width];
+          const oys = [o.y, o.y + o.height / 2, o.y + o.height];
+
+          for (const sx of selXs) for (const ox of oxs) {
+            const diff = ox - sx;
+            if (Math.abs(diff) < bestAbsX) { bestAbsX = Math.abs(diff); bestDx = diff; }
+          }
+          for (const sy of selYs) for (const oy of oys) {
+            const diff = oy - sy;
+            if (Math.abs(diff) < bestAbsY) { bestAbsY = Math.abs(diff); bestDy = diff; }
+          }
+        }
+      }
+
+      const snapDx = bestAbsX <= ALIGN_THRESHOLD ? bestDx : 0;
+      const snapDy = bestAbsY <= ALIGN_THRESHOLD ? bestDy : 0;
+
+      for (const sel of selected) {
+        const nx = sel.x + dx + snapDx, ny = sel.y + dy + snapDy;
+        const selXs = { left: nx, cx: nx + sel.width / 2, right: nx + sel.width };
+        const selYs = { top: ny, cy: ny + sel.height / 2, bottom: ny + sel.height };
+        for (const o of others) {
+          const oxs = { left: o.x, cx: o.x + o.width / 2, right: o.x + o.width };
+          const oys = { top: o.y, cy: o.y + o.height / 2, bottom: o.y + o.height };
+          for (const k1 of Object.keys(selXs)) for (const k2 of Object.keys(oxs)) {
+            if (Math.abs(selXs[k1] - oxs[k2]) < 0.5) {
+              const y1 = Math.min(ny, o.y) - 20;
+              const y2 = Math.max(ny + sel.height, o.y + o.height) + 20;
+              guides.push({ orient: 'vert', x: oxs[k2], y1, y2 });
+            }
+          }
+          for (const k1 of Object.keys(selYs)) for (const k2 of Object.keys(oys)) {
+            if (Math.abs(selYs[k1] - oys[k2]) < 0.5) {
+              const x1 = Math.min(nx, o.x) - 20;
+              const x2 = Math.max(nx + sel.width, o.x + o.width) + 20;
+              guides.push({ orient: 'horiz', y: oys[k2], x1, x2 });
+            }
+          }
+        }
+      }
+
+      return { dx: snapDx, dy: snapDy, guides };
+    }
+
+    function renderAlignGuides(guides) {
+      for (const el of alignGuideEls) el.remove();
+      alignGuideEls = [];
+      for (const g of guides) {
+        const el = document.createElement('div');
+        el.className = 'align-guide ' + g.orient;
+        if (g.orient === 'vert') {
+          el.style.left = g.x + 'px';
+          el.style.top = g.y1 + 'px';
+          el.style.height = (g.y2 - g.y1) + 'px';
+        } else {
+          el.style.top = g.y + 'px';
+          el.style.left = g.x1 + 'px';
+          el.style.width = (g.x2 - g.x1) + 'px';
+        }
+        canvasNodes.appendChild(el);
+        alignGuideEls.push(el);
+      }
+    }
+
+    function clearAlignGuides() {
+      for (const el of alignGuideEls) el.remove();
+      alignGuideEls = [];
+    }
+
+    function reorderSelected(where) {
+      if (state.selectedNodeIds.size === 0) return;
+      const ids = [...state.selectedNodeIds];
+      const prevOrder = Array.from(canvasNodes.children);
+
+      for (const id of ids) {
+        const n = state.nodes[id];
+        if (!n || !n.element) continue;
+        if (where === 'front') canvasNodes.appendChild(n.element);
+        else canvasNodes.insertBefore(n.element, canvasNodes.firstChild);
+      }
+
+      pushUndo(() => {
+        for (const el of prevOrder) canvasNodes.appendChild(el);
+      });
+    }
+
+    function nudgeSelected(arrowKey, step) {
+      let dx = 0, dy = 0;
+      if (arrowKey === 'ArrowLeft') dx = -step;
+      if (arrowKey === 'ArrowRight') dx = step;
+      if (arrowKey === 'ArrowUp') dy = -step;
+      if (arrowKey === 'ArrowDown') dy = step;
+
+      const before = {};
+      for (const id of state.selectedNodeIds) {
+        const n = state.nodes[id];
+        if (!n || n.locked) continue;
+        before[id] = { x: n.x, y: n.y };
+        n.x += dx;
+        n.y += dy;
+        n.element.style.left = n.x + 'px';
+        n.element.style.top = n.y + 'px';
+        updateConnectionsForNode(id);
+      }
+
+      if (state.groupBoxEl) {
+        const bb = getSelectionBBox();
+        if (bb) {
+          state.groupBoxEl.style.left = bb.x + 'px';
+          state.groupBoxEl.style.top = bb.y + 'px';
+        }
+      }
+
+      if (Object.keys(before).length) {
+        pushUndo(() => {
+          for (const id of Object.keys(before)) {
+            const n = state.nodes[id];
+            if (!n) continue;
+            n.x = before[id].x; n.y = before[id].y;
+            n.element.style.left = n.x + 'px';
+            n.element.style.top = n.y + 'px';
+            updateConnectionsForNode(id);
+          }
+          if (state.groupBoxEl) {
+            const bb = getSelectionBBox();
+            if (bb) {
+              state.groupBoxEl.style.left = bb.x + 'px';
+              state.groupBoxEl.style.top = bb.y + 'px';
+            }
+          }
+        });
+      }
+    }
+
+    function createNodeAtCursor(type) {
+      const rect = canvasContainer.getBoundingClientRect();
+      let cx = lastMouseCX, cy = lastMouseCY;
+      const insideCanvas = cx >= rect.left && cx <= rect.right &&
+        cy >= rect.top && cy <= rect.bottom;
+      if (!insideCanvas) {
+        cx = rect.left + rect.width / 2;
+        cy = rect.top + rect.height / 2;
+      }
+      const dims = NODE_DIMS[type] || NODE_DIMS.process;
+      const wc = toWorldCoords(cx, cy);
+      const x = Math.max(0, wc.x - dims.width / 2);
+      const y = Math.max(0, wc.y - dims.height / 2);
+
+      clearSelection();
+      const node = createNode(type, x, y);
+      addToSelection(node.id);
+
+      const nodeId = node.id;
+      pushUndo(() => {
+        state.selectedNodeIds.delete(nodeId);
+        deleteNode(nodeId);
+        renumberNodes();
+        updatePropsPanel();
+      });
+    }
+
+    function onKeyUp(e) {
+      if (e.code === 'Space') {
+        spaceHeld = false;
+        canvasContainer.classList.remove('space-held');
+        if (!state.panning.active) canvasContainer.classList.remove('panning');
+      }
+    }
+
+    // ── Clear all ──────────────────────────────────────────────────────────────
+
+    function clearAll() {
+      if (!confirm('Clear all components and connections?')) return;
+
+      const nodeSnaps = Object.keys(state.nodes).map(snapshotNode);
+      const connSnaps = Object.values(state.connections).map(snapshotConnection);
+
+      for (const id of Object.keys(state.connections)) deleteConnection(id);
+      for (const id of Object.keys(state.nodes)) deleteNode(id);
+      clearSelection();
+
+      pushUndo(() => {
+        nodeSnaps.forEach(restoreNode);
+        connSnaps.forEach(restoreConnection);
+      });
+    }
+
+    // ── Export ─────────────────────────────────────────────────────────────────
+
+    function serializeState() {
+      return {
+        nodes: Object.values(state.nodes).map(n => ({
+          id: n.id, type: n.type, seq: n.seq,
+          label: n.label, notes: n.notes, responseTeam: n.responseTeam,
+          links: n.links || [],
+          dbServer: n.dbServer || '',
+          apiUrl: n.apiUrl || '', apiRequest: n.apiRequest || '', apiResponse: n.apiResponse || '',
+          collapsed: n.collapsed || false,
+          locked: n.locked || false,
+          customColor: n.customColor || null,
+          x: n.x, y: n.y, width: n.width, height: n.height
+        })),
+        connections: Object.values(state.connections).map(c => ({
+          id: c.id, fromNodeId: c.fromNodeId, fromPort: c.fromPort,
+          toNodeId: c.toNodeId, toPort: c.toPort, label: c.label || '',
+          fromAnchored: !!c.fromAnchored, toAnchored: !!c.toAnchored,
+          waypoints: (c.waypoints || []).map(p => ({ x: p.x, y: p.y }))
+        }))
+      };
+    }
+
+    function exportDiagram() {
+      const data = serializeState();
+      const input = window.prompt('Save as:', 'flow-diagram');
+      if (input === null) return;
+      const filename = (input.trim() || 'flow-diagram').replace(/\.json$/i, '') + '.json';
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+      clearAutosave();
+    }
+
+    // ── Autosave ───────────────────────────────────────────────────────────────
+    const AUTOSAVE_KEY = 'flow:autosave';
+    let autosaveTimer = null;
+
+    function scheduleAutosave() {
+      if (autosaveTimer) clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(() => {
+        autosaveTimer = null;
+        try {
+          const data = serializeState();
+          if (data.nodes.length === 0 && data.connections.length === 0) {
+            localStorage.removeItem(AUTOSAVE_KEY);
+          } else {
+            localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(data));
+          }
+        } catch { }
+      }, 600);
+    }
+
+    function clearAutosave() {
+      try { localStorage.removeItem(AUTOSAVE_KEY); } catch { }
+    }
+
+    function tryRestoreAutosave() {
+      let raw;
+      try { raw = localStorage.getItem(AUTOSAVE_KEY); } catch { return; }
+      if (!raw) return;
+      let data;
+      try { data = JSON.parse(raw); } catch { return; }
+      if (!data || !Array.isArray(data.nodes) || data.nodes.length === 0) return;
+      if (confirm('Restore your previous session?')) {
+        undoing = true;
+        loadDiagram(data);
+        undoing = false;
+      } else {
+        clearAutosave();
+      }
+    }
+
+    // ── Import ─────────────────────────────────────────────────────────────────
+
+    function importDiagram(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try { loadDiagram(JSON.parse(ev.target.result)); }
+        catch { alert('Invalid JSON file.'); }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    }
+
+    function loadDiagram(data) {
+      for (const id of Object.keys(state.connections)) deleteConnection(id);
+      for (const id of Object.keys(state.nodes)) deleteNode(id);
+      clearSelection();
+
+      (data.nodes || []).forEach(n => {
+        const node = createNode(n.type, n.x, n.y);
+        const tempId = node.id;
+        node.seq = n.seq || node.seq;
+        node.label = n.label;
+        node.notes = n.notes || '';
+        node.responseTeam = n.responseTeam || '';
+        node.dbServer = n.dbServer || '';
+        node.apiUrl = n.apiUrl || '';
+        node.apiRequest = n.apiRequest || '';
+        node.apiResponse = n.apiResponse || '';
+        node.collapsed = n.collapsed || false;
+        node.locked = n.locked || false;
+        if (node.locked) node.element.classList.add('node--locked');
+        node.customColor = n.customColor || null;
+        if (node.customColor) applyNodeColor(node);
+        // migrate legacy single-link githubUrl
+        if (Array.isArray(n.links)) {
+          node.links = n.links;
+        } else if (n.githubUrl && n.githubUrl.trim()) {
+          node.links = [{ name: 'GitHub', url: n.githubUrl.trim() }];
+        } else {
+          node.links = [];
+        }
+        if (n.width) { node.width = n.width; node.element.style.width = n.width + 'px'; }
+        if (n.height) { node.height = n.height; node.element.style.height = n.height + 'px'; }
+        node.element.querySelector('.node-seq').textContent = node.seq || '';
+        setNodeLabelText(node.element, n.label);
+        setNodeDesc(node.element, node.notes);
+        renderNodeLinks(node.element, node.links);
+        if (node.type === 'database') setDbServer(node.element, node.dbServer);
+        if (node.type === 'api') { setApiUrl(node.element, node.apiUrl); setApiSections(node.element, node.apiRequest, node.apiResponse); }
+        const collapseBtn = node.element.querySelector('.node-toggle-btn');
+        if (node.collapsed && collapseBtn) {
+          node.element.classList.add('node--collapsed');
+          collapseBtn.textContent = '+';
+        } else {
+          node.collapsed = false;
+        }
+        delete state.nodes[tempId];
+        node.id = n.id;
+        node.element.dataset.nodeId = n.id;
+        state.nodes[n.id] = node;
+        node.element.querySelectorAll('.port, .resize-handle').forEach(p => { p.dataset.nodeId = n.id; });
+        autoResizeNode(node);
+      });
+
+      (data.connections || []).forEach(c => {
+        createConnection(c.fromNodeId, c.fromPort, c.toNodeId, c.toPort, c.label || '',
+          { from: c.fromAnchored, to: c.toAnchored }, c.waypoints);
+      });
+
+      const maxSeq = Object.values(state.nodes).reduce((m, n) => Math.max(m, n.seq || 0), 0);
+      state.seqCounter = maxSeq;
+
+      history.length = 0;
+      redoStack = [];
+      updateUndoButton();
+      updateRedoButton();
+    }
+
+    // ── PNG Export ─────────────────────────────────────────────────────────────
+
+    // Vector export. Re-uses the live DOM + CSS via <foreignObject> so the output
+    // matches the canvas exactly and stays crisp at any zoom in a browser.
+    function exportSVG() {
+      const nodes = Object.values(state.nodes);
+      if (nodes.length === 0) {
+        alert('Nothing to export — add some components first.');
+        return;
+      }
+      // Drop transient edit handles (endpoint/waypoint dots) from the output.
+      clearSelection();
+
+      const PAD = 48;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const n of nodes) {
+        minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+        maxX = Math.max(maxX, n.x + n.width); maxY = Math.max(maxY, n.y + n.height);
+      }
+      // Connection curves/waypoints may bow outside the node bounds.
+      for (const c of Object.values(state.connections)) {
+        if (!c.pathElement) continue;
+        let bb; try { bb = c.pathElement.getBBox(); } catch (_) { continue; }
+        minX = Math.min(minX, bb.x); minY = Math.min(minY, bb.y);
+        maxX = Math.max(maxX, bb.x + bb.width); maxY = Math.max(maxY, bb.y + bb.height);
+      }
+      minX -= PAD; minY -= PAD; maxX += PAD; maxY += PAD;
+      const W = maxX - minX, H = maxY - minY;
+
+      const SVGNS = 'http://www.w3.org/2000/svg';
+      const XHTML = 'http://www.w3.org/1999/xhtml';
+      const svg = document.createElementNS(SVGNS, 'svg');
+      svg.setAttribute('xmlns', SVGNS);
+      svg.setAttribute('width', W);
+      svg.setAttribute('height', H);
+      svg.setAttribute('viewBox', `${minX} ${minY} ${W} ${H}`);
+
+      // Embed the page's CSS so the foreignObject HTML renders standalone.
+      // (Plain text node — XMLSerializer escapes it and the XML parser restores
+      // it on load, so CSS round-trips losslessly. createCDATASection() is not
+      // allowed on an HTML document and would throw.)
+      const css = Array.from(document.querySelectorAll('style')).map(s => s.textContent).join('\n');
+      const styleEl = document.createElementNS(SVGNS, 'style');
+      styleEl.textContent = css;
+      svg.appendChild(styleEl);
+
+      // Background.
+      const bg = document.createElementNS(SVGNS, 'rect');
+      bg.setAttribute('x', minX); bg.setAttribute('y', minY);
+      bg.setAttribute('width', W); bg.setAttribute('height', H);
+      bg.setAttribute('fill', '#f9fafb');
+      svg.appendChild(bg);
+
+      // Connection layer (native vector paths, world coords) + arrowhead defs.
+      const defs = canvasSvg.querySelector('defs');
+      if (defs) svg.appendChild(defs.cloneNode(true));
+      for (const c of Object.values(state.connections)) {
+        if (!c.pathElement) continue;
+        const p = c.pathElement.cloneNode(true);
+        p.removeAttribute('class');
+        p.setAttribute('fill', 'none');
+        p.setAttribute('stroke', '#94a3b8');
+        p.setAttribute('stroke-width', '1.5');
+        p.setAttribute('marker-end', 'url(#arrowhead)');
+        svg.appendChild(p);
+      }
+
+      // Node + label layer (real HTML, so it looks identical and text stays selectable).
+      const fo = document.createElementNS(SVGNS, 'foreignObject');
+      fo.setAttribute('x', minX); fo.setAttribute('y', minY);
+      fo.setAttribute('width', W); fo.setAttribute('height', H);
+
+      const wrapper = document.createElementNS(XHTML, 'div');
+      wrapper.setAttribute('xmlns', XHTML);
+      const cs = getComputedStyle(nodes[0].element);
+      wrapper.setAttribute('style',
+        `position:absolute; left:0; top:0; width:${W}px; height:${H}px;` +
+        ` transform:translate(${-minX}px,${-minY}px); transform-origin:0 0;` +
+        ` font-family:${cs.fontFamily};`);
+
+      for (const n of nodes) {
+        const clone = n.element.cloneNode(true);
+        clone.querySelectorAll('.port, .resize-handle, .node-connect-btn, .node-toggle-btn')
+          .forEach(e => e.remove());
+        clone.classList.remove('selected', 'dimmed', 'connected-highlight', 'rb-highlight');
+        wrapper.appendChild(clone);
+      }
+      for (const c of Object.values(state.connections)) {
+        if (c.labelElement && c.label) {
+          const lc = c.labelElement.cloneNode(true);
+          lc.querySelectorAll('.conn-label-editor').forEach(e => e.remove());
+          wrapper.appendChild(lc);
+        }
+      }
+      fo.appendChild(wrapper);
+      svg.appendChild(fo);
+
+      const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(svg);
+      const input = window.prompt('Save as:', 'flow-diagram');
+      if (input === null) return;
+      const filename = (input.trim() || 'flow-diagram').replace(/\.svg$/i, '') + '.svg';
+      const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function exportPNG() {
+      const nodes = Object.values(state.nodes);
+      if (nodes.length === 0) {
+        alert('Nothing to export — add some components first.');
+        return;
+      }
+
+      const PAD = 48;
+      const SCALE = 2;
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const n of nodes) {
+        minX = Math.min(minX, n.x);
+        minY = Math.min(minY, n.y);
+        maxX = Math.max(maxX, n.x + n.width);
+        maxY = Math.max(maxY, n.y + n.height);
+      }
+
+      const W = maxX - minX + PAD * 2;
+      const H = maxY - minY + PAD * 2;
+      const ox = minX - PAD;
+      const oy = minY - PAD;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = W * SCALE;
+      canvas.height = H * SCALE;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(SCALE, SCALE);
+
+      ctx.fillStyle = '#f9fafb';
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.fillStyle = '#d1d5db';
+      for (let gx = 0; gx < W; gx += 24) {
+        for (let gy = 0; gy < H; gy += 24) {
+          ctx.beginPath();
+          ctx.arc(gx, gy, 1, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      for (const conn of Object.values(state.connections)) {
+        pngDrawConnection(ctx, conn, ox, oy);
+      }
+
+      for (const node of nodes) {
+        pngDrawNode(ctx, node, ox, oy);
+      }
+
+      const input = window.prompt('Save as:', 'flow-diagram');
+      if (input === null) return;
+      const filename = (input.trim() || 'flow-diagram').replace(/\.png$/i, '') + '.png';
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    function pngDrawConnection(ctx, conn, ox, oy) {
+      const wps = conn.waypoints || [];
+      if (wps.length) {
+        // Straight polyline through the waypoints.
+        const start = nodeBorderToward(conn.fromNodeId, wps[0]);
+        const end = nodeBorderToward(conn.toNodeId, wps[wps.length - 1]);
+        const pts = [start, ...wps, end].map(p => ({ x: p.x - ox, y: p.y - oy }));
+
+        ctx.save();
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.stroke();
+        ctx.restore();
+
+        const last = pts[pts.length - 1], prev = pts[pts.length - 2];
+        pngDrawArrowheadAngle(ctx, last.x, last.y, Math.atan2(last.y - prev.y, last.x - prev.x));
+
+        if (conn.label) {
+          const mid = pts[Math.floor((pts.length - 1) / 2)];
+          const nxt = pts[Math.floor((pts.length - 1) / 2) + 1] || mid;
+          pngDrawConnLabel(ctx, conn.label, (mid.x + nxt.x) / 2, (mid.y + nxt.y) / 2);
+        }
+        return;
+      }
+
+      const from = getPortCenter(conn.fromNodeId, conn.fromPort);
+      const to = getPortCenter(conn.toNodeId, conn.toPort);
+
+      const fx = from.x - ox, fy = from.y - oy;
+      const tx = to.x - ox, ty = to.y - oy;
+
+      const dx = Math.abs(tx - fx);
+      const dy = Math.abs(ty - fy);
+      const offset = Math.max(60, (dx + dy) * 0.3);
+
+      const vec = {
+        top: { cx: 0, cy: -offset },
+        right: { cx: offset, cy: 0 },
+        bottom: { cx: 0, cy: offset },
+        left: { cx: -offset, cy: 0 }
+      };
+
+      const c1x = fx + vec[conn.fromPort].cx, c1y = fy + vec[conn.fromPort].cy;
+      const c2x = tx + vec[conn.toPort].cx, c2y = ty + vec[conn.toPort].cy;
+
+      ctx.save();
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.bezierCurveTo(c1x, c1y, c2x, c2y, tx, ty);
+      ctx.stroke();
+      ctx.restore();
+
+      pngDrawArrowhead(ctx, tx, ty, conn.toPort);
+
+      if (conn.label) {
+        const t = 0.5, mt = 1 - t;
+        const mx = mt * mt * mt * fx + 3 * mt * mt * t * c1x + 3 * mt * t * t * c2x + t * t * t * tx;
+        const my = mt * mt * mt * fy + 3 * mt * mt * t * c1y + 3 * mt * t * t * c2y + t * t * t * ty;
+        pngDrawConnLabel(ctx, conn.label, mx, my);
+      }
+    }
+
+    function pngDrawArrowhead(ctx, x, y, port) {
+      const S = 9;
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      if (port === 'left') {
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - S, y - S * 0.45);
+        ctx.lineTo(x - S, y + S * 0.45);
+      } else if (port === 'right') {
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + S, y - S * 0.45);
+        ctx.lineTo(x + S, y + S * 0.45);
+      } else if (port === 'top') {
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - S * 0.45, y - S);
+        ctx.lineTo(x + S * 0.45, y - S);
+      } else {
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - S * 0.45, y + S);
+        ctx.lineTo(x + S * 0.45, y + S);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Arrowhead pointing along an arbitrary angle (for straight/waypoint paths).
+    function pngDrawArrowheadAngle(ctx, x, y, angle) {
+      const S = 9;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-S, -S * 0.45);
+      ctx.lineTo(-S, S * 0.45);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function pngDrawConnLabel(ctx, label, mx, my) {
+      ctx.save();
+      ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+      const lines = String(label).split('\n');
+      const lineH = 14, padX = 4, padY = 2;
+      let maxW = 0;
+      for (const ln of lines) maxW = Math.max(maxW, ctx.measureText(ln).width);
+      const w = maxW + padX * 2;
+      const h = lines.length * lineH + padY * 2;
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.rect(mx - w / 2, my - h / 2, w, h);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#111827';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const top = my - ((lines.length - 1) * lineH) / 2;
+      lines.forEach((ln, i) => ctx.fillText(ln, mx, top + i * lineH));
+      ctx.restore();
+    }
+
+    function pngDrawNode(ctx, node, ox, oy) {
+      const x = node.x - ox;
+      const y = node.y - oy;
+      const w = node.width;
+      const h = node.height;
+      const hasNotes = !node.collapsed && node.notes && node.notes.trim();
+
+      ctx.save();
+
+      switch (node.type) {
+        case 'start':
+        case 'end':
+          pngPill(ctx, x, y, w, h, '#dcfce7', '#86efac');
+          if (hasNotes) {
+            pngText(ctx, node.label, x + w / 2, y + 16, w - 16, 'center');
+            pngDrawNotes(ctx, node.notes, x + 12, y + 32, w - 24, y + h - 8);
+          } else {
+            pngText(ctx, node.label, x + w / 2, y + h / 2, w - 16, 'center');
+          }
+          break;
+
+        case 'process':
+          pngRoundRect(ctx, x, y, w, h, 6, '#dbeafe', '#93c5fd');
+          if (hasNotes) {
+            pngText(ctx, node.label, x + w / 2, y + 16, w - 16, 'center');
+            pngDrawNotes(ctx, node.notes, x + 10, y + 32, w - 20, y + h - 8);
+          } else {
+            pngText(ctx, node.label, x + w / 2, y + h / 2, w - 16, 'center');
+          }
+          break;
+
+        case 'decision':
+          pngDiamond(ctx, x, y, w, h, '#fef9c3', '#fde047');
+          if (hasNotes) {
+            pngText(ctx, node.label, x + w / 2, y + h * 0.36, w * 0.62, 'center');
+            pngDrawNotes(ctx, node.notes, x + w * 0.25, y + h * 0.48, w * 0.5, y + h * 0.78);
+          } else {
+            pngText(ctx, node.label, x + w / 2, y + h / 2, w * 0.62, 'center');
+          }
+          break;
+
+        case 'note':
+          pngNote(ctx, x, y, w, h, '#fefce8', '#fde047');
+          pngText(ctx, node.label, x + 10, y + 14, w - 20, 'left');
+          if (hasNotes) pngDrawNotes(ctx, node.notes, x + 10, y + 32, w - 20, y + h - 8);
+          break;
+
+        case 'database':
+          pngDatabase(ctx, x, y, w, h, '#f3e8ff', '#ede9fe', '#c084fc');
+          if (hasNotes) {
+            pngText(ctx, node.label, x + w / 2, y + 28, w - 16, 'center');
+            pngDrawNotes(ctx, node.notes, x + 10, y + 44, w - 20, y + h - 14);
+          } else {
+            pngText(ctx, node.label, x + w / 2, y + h * 0.6, w - 16, 'center');
+          }
+          break;
+
+        case 'api': {
+          const headerH = 22;
+          pngApi(ctx, x, y, w, h, '#fff7ed', '#fb923c');
+          pngText(ctx, node.label, x + w / 2, y + headerH + 12, w - 16, 'center');
+          let sectionY = y + headerH + 28;
+          if (hasNotes) {
+            sectionY = pngDrawNotes(ctx, node.notes, x + 8, sectionY, w - 16, y + h - 8) + 4;
+          }
+          if (node.apiRequest) {
+            ctx.font = 'bold 8px -apple-system, sans-serif';
+            ctx.fillStyle = '#c2410c'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+            ctx.fillText('REQUEST', x + 8, sectionY);
+            sectionY += 11;
+            ctx.font = '9px -apple-system, sans-serif';
+            ctx.fillStyle = '#52525b';
+            const reqLines = node.apiRequest.slice(0, 80).split('\n').slice(0, 3);
+            reqLines.forEach(l => { ctx.fillText(l.slice(0, 28), x + 8, sectionY); sectionY += 11; });
+          }
+          if (node.apiResponse) {
+            sectionY += 3;
+            ctx.font = 'bold 8px -apple-system, sans-serif';
+            ctx.fillStyle = '#c2410c'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+            ctx.fillText('RESPONSE', x + 8, sectionY);
+            sectionY += 11;
+            ctx.font = '9px -apple-system, sans-serif';
+            ctx.fillStyle = '#52525b';
+            const resLines = node.apiResponse.slice(0, 80).split('\n').slice(0, 3);
+            resLines.forEach(l => { ctx.fillText(l.slice(0, 28), x + 8, sectionY); sectionY += 11; });
+          }
+          break;
+        }
+
+        case 'queue':
+          pngQueue(ctx, x, y, w, h, '#ccfbf1', '#2dd4bf');
+          if (hasNotes) {
+            pngText(ctx, node.label, x + w / 2, y + 16, w - 24, 'center');
+            pngDrawNotes(ctx, node.notes, x + 14, y + 32, w - 28, y + h - 8);
+          } else {
+            pngText(ctx, node.label, x + w / 2, y + h / 2, w - 24, 'center');
+          }
+          break;
+      }
+
+      // Sequence badge
+      if (node.seq) {
+        const bx = x - 6, by = y - 6, br = 9;
+        ctx.fillStyle = '#6366f1';
+        ctx.beginPath();
+        ctx.arc(bx, by, br, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 8px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(node.seq), bx, by);
+      }
+
+      ctx.restore();
+    }
+
+    function pngPill(ctx, x, y, w, h, fill, stroke) {
+      const r = h / 2;
+      ctx.fillStyle = fill;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.arc(x + w - r, y + r, r, -Math.PI / 2, Math.PI / 2);
+      ctx.lineTo(x + r, y + h);
+      ctx.arc(x + r, y + r, r, Math.PI / 2, -Math.PI / 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    function pngRoundRect(ctx, x, y, w, h, r, fill, stroke) {
+      ctx.fillStyle = fill;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.arc(x + w - r, y + r, r, -Math.PI / 2, 0);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.arc(x + w - r, y + h - r, r, 0, Math.PI / 2);
+      ctx.lineTo(x + r, y + h);
+      ctx.arc(x + r, y + h - r, r, Math.PI / 2, Math.PI);
+      ctx.lineTo(x, y + r);
+      ctx.arc(x + r, y + r, r, Math.PI, -Math.PI / 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    function pngDiamond(ctx, x, y, w, h, fill, stroke) {
+      const cx = x + w / 2, cy = y + h / 2;
+      ctx.fillStyle = fill;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, y);
+      ctx.lineTo(x + w, cy);
+      ctx.lineTo(cx, y + h);
+      ctx.lineTo(x, cy);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    function pngNote(ctx, x, y, w, h, fill, stroke) {
+      const fold = 14;
+      ctx.fillStyle = fill;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + w - fold, y);
+      ctx.lineTo(x + w, y + fold);
+      ctx.lineTo(x + w, y + h);
+      ctx.lineTo(x, y + h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(0,0,0,0.07)';
+      ctx.beginPath();
+      ctx.moveTo(x + w - fold, y);
+      ctx.lineTo(x + w, y + fold);
+      ctx.lineTo(x + w - fold, y + fold);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + w - fold, y);
+      ctx.lineTo(x + w - fold, y + fold);
+      ctx.lineTo(x + w, y + fold);
+      ctx.stroke();
+    }
+
+    function pngDatabase(ctx, x, y, w, h, fill, capFill, stroke) {
+      const capRy = 10; // half-height of the ellipse cap
+      const bodyTop = y + capRy; // body starts at the center of the top cap
+      const bodyH = h - capRy;
+
+      // Body (sides + bottom, no top border)
+      ctx.fillStyle = fill;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(x, bodyTop, w, bodyH);
+      ctx.beginPath();
+      ctx.moveTo(x, bodyTop);
+      ctx.lineTo(x, y + h);
+      ctx.lineTo(x + w, y + h);
+      ctx.lineTo(x + w, bodyTop);
+      ctx.stroke();
+
+      // Bottom arc (depth illusion)
+      ctx.beginPath();
+      ctx.ellipse(x + w / 2, y + h, w / 2, capRy * 0.5, 0, Math.PI, 0);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = stroke;
+      ctx.stroke();
+
+      // Top cap ellipse
+      ctx.fillStyle = capFill;
+      ctx.beginPath();
+      ctx.ellipse(x + w / 2, bodyTop, w / 2, capRy, 0, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.strokeStyle = stroke;
+      ctx.stroke();
+    }
+
+    function pngApi(ctx, x, y, w, h, fill, stroke) {
+      const headerH = 20;
+      // Main body
+      pngRoundRect(ctx, x, y, w, h, 4, fill, stroke);
+      // Header bar
+      ctx.fillStyle = '#ffedd5';
+      ctx.beginPath();
+      ctx.moveTo(x + 4, y + 1);
+      ctx.lineTo(x + w - 4, y + 1);
+      ctx.arcTo(x + w - 1, y + 1, x + w - 1, y + 4, 3);
+      ctx.lineTo(x + w - 1, y + headerH);
+      ctx.lineTo(x + 1, y + headerH);
+      ctx.lineTo(x + 1, y + 4);
+      ctx.arcTo(x + 1, y + 1, x + 4, y + 1, 3);
+      ctx.closePath();
+      ctx.fill();
+      // Divider line
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y + headerH);
+      ctx.lineTo(x + w, y + headerH);
+      ctx.stroke();
+      // Header label
+      ctx.font = 'bold 8px -apple-system, sans-serif';
+      ctx.fillStyle = '#c2410c';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('REQ → RES', x + w / 2, y + headerH / 2);
+    }
+
+    function pngQueue(ctx, x, y, w, h, fill, stroke) {
+      const sk = h * 0.22;
+      ctx.fillStyle = fill;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x + sk, y);
+      ctx.lineTo(x + w, y);
+      ctx.lineTo(x + w - sk, y + h);
+      ctx.lineTo(x, y + h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    function pngText(ctx, text, x, y, maxWidth, align) {
+      ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillStyle = '#18181b';
+      ctx.textAlign = align;
+      ctx.textBaseline = align === 'left' ? 'top' : 'middle';
+
+      const words = String(text).split(' ');
+      const lines = [];
+      let line = '';
+      for (const word of words) {
+        const test = line ? line + ' ' + word : word;
+        if (ctx.measureText(test).width > maxWidth && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = test;
+        }
+      }
+      if (line) lines.push(line);
+
+      const lh = 15;
+      const totalH = lines.length * lh;
+      const startY = align === 'left' ? y : y - totalH / 2 + lh / 2;
+
+      lines.forEach((l, i) => ctx.fillText(l, x, startY + i * lh));
+    }
+
+    function pngDrawNotes(ctx, notes, x, y, maxWidth, bottomY) {
+      if (!notes || !notes.trim()) return y;
+      if (maxWidth <= 0) return y;
+
+      ctx.save();
+      ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillStyle = '#52525b';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+
+      const lh = 12;
+      const maxY = (bottomY != null && isFinite(bottomY)) ? bottomY : Infinity;
+      let cy = y;
+      let truncated = false;
+
+      const fits = s => ctx.measureText(s).width <= maxWidth;
+
+      const flushLine = text => {
+        if (cy + lh > maxY) { truncated = true; return false; }
+        ctx.fillText(text, x, cy);
+        cy += lh;
+        return true;
+      };
+
+      // Break a single word into pieces that each fit within (maxWidth - indent).
+      const breakLongWord = (word, indent) => {
+        const pieces = [];
+        let cur = '';
+        for (const ch of word) {
+          const test = cur + ch;
+          if (!fits(indent + test) && cur) {
+            pieces.push(cur);
+            cur = ch;
+          } else {
+            cur = test;
+          }
+        }
+        if (cur) pieces.push(cur);
+        return pieces.length ? pieces : [word];
+      };
+
+      outer:
+      for (const raw of notes.split('\n')) {
+        if (cy + lh > maxY) { truncated = true; break; }
+        const trimmed = raw.trim();
+        if (!trimmed) { cy += lh * 0.5; continue; }
+
+        const m = trimmed.match(/^[-*•]\s+(.*)/);
+        const isBullet = !!m;
+        const body = isBullet ? m[1] : trimmed;
+        const prefix = isBullet ? '• ' : '';
+        const contIndent = isBullet ? '   ' : '';
+
+        let line = prefix;
+        let started = false;
+
+        for (let word of body.split(' ')) {
+          if (!word) continue;
+
+          // Try appending normally.
+          const candidate = started ? line + ' ' + word : line + word;
+          if (fits(candidate)) { line = candidate; started = true; continue; }
+
+          // Doesn't fit — flush current line first.
+          if (started) {
+            if (!flushLine(line)) break outer;
+            line = contIndent;
+            started = false;
+          }
+
+          // If the word still won't fit on its own line, break it by characters.
+          if (!fits(line + word)) {
+            const pieces = breakLongWord(word, contIndent);
+            for (let i = 0; i < pieces.length - 1; i++) {
+              if (!flushLine(line + pieces[i])) break outer;
+              line = contIndent;
+            }
+            line = line + pieces[pieces.length - 1];
+            started = true;
+          } else {
+            line = line + word;
+            started = true;
+          }
+        }
+
+        if (line.trim()) {
+          if (!flushLine(line)) break;
+        }
+      }
+
+      if (truncated && cy > y) {
+        // Replace the last drawn line's tail with an ellipsis to signal clipping.
+        ctx.fillStyle = 'rgba(249,250,251,0.95)';
+        ctx.fillRect(x + maxWidth - 10, cy - lh, 10, lh);
+        ctx.fillStyle = '#52525b';
+        ctx.fillText('…', x + maxWidth - 8, cy - lh);
+      }
+
+      ctx.restore();
+      return cy;
+    }
+
+    // ── Bootstrap ──────────────────────────────────────────────────────────────
+
+    document.addEventListener('DOMContentLoaded', init);
+
+  </script>
+
+</body>
+
+</html>
