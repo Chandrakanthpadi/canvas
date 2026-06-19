@@ -4,7 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flow Diagram Builder</title>
+  <title>Canvas</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%236366f1'/%3E%3Crect%20x='6'%20y='7'%20width='9'%20height='7'%20rx='2'%20fill='%23ffffff'/%3E%3Crect%20x='17'%20y='18'%20width='9'%20height='7'%20rx='2'%20fill='%23ffffff'/%3E%3Cpath%20d='M10.5%2014V17a1%201%200%200%200%201%201h6'%20fill='none'%20stroke='%23ffffff'%20stroke-width='2.2'%20stroke-linecap='round'/%3E%3C/svg%3E">
   <!-- <link rel="stylesheet" href="style.css"> -->
   <style>
     :root {
@@ -20,18 +21,6 @@
       --text-3: #a1a1aa;
       --canvas-bg: #f9fafb;
       --canvas-dot: #d1d5db;
-    }
-
-    :root.dark {
-      --bg: #18181b;
-      --surface: #27272a;
-      --border: #3f3f46;
-      --border-md: #52525b;
-      --text-1: #f4f4f5;
-      --text-2: #d4d4d8;
-      --text-3: #71717a;
-      --canvas-bg: #0f0f12;
-      --canvas-dot: #2a2a2e;
     }
 
     :root {
@@ -84,6 +73,18 @@
       white-space: nowrap;
     }
 
+    .diagram-name {
+      font-size: 12px;
+      font-family: var(--font);
+      color: var(--text-1);
+      background: var(--surface);
+      border: 1px solid var(--border-md);
+      border-radius: var(--radius-sm);
+      padding: 4px 8px;
+      width: 160px;
+    }
+    .diagram-name:focus { outline: none; border-color: var(--accent); }
+
     .toolbar-sep {
       width: 1px;
       height: 20px;
@@ -114,6 +115,110 @@
     .toolbar-btn:active {
       background: var(--border);
     }
+
+    .toolbar-btn { flex-shrink: 0; display: inline-flex; align-items: center; }
+    .tb-icon {
+      width: 14px;
+      height: 14px;
+      margin-right: 5px;
+      flex-shrink: 0;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .toolbar-spacer { flex: 1 1 auto; min-width: 6px; }
+
+    /* ── Toolbar dropdown menus ── */
+    .toolbar-menu { position: relative; display: inline-flex; flex-shrink: 0; }
+    .toolbar-menu-trigger { gap: 4px; }
+    .tb-caret {
+      font-size: 9px;
+      line-height: 1;
+      color: var(--text-3);
+      transition: transform 0.12s;
+    }
+    .toolbar-menu.open > .toolbar-menu-trigger { background: var(--bg); color: var(--text-1); }
+    .toolbar-menu.open .tb-caret { transform: rotate(180deg); }
+    .toolbar-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 168px;
+      padding: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border-md);
+      border-radius: var(--radius);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+      z-index: 1000;
+    }
+    .toolbar-menu.open .toolbar-dropdown { display: flex; }
+    .toolbar-dropdown .toolbar-btn {
+      width: 100%;
+      justify-content: flex-start;
+      padding: 6px 10px;
+    }
+
+    /* ── How-to guide ── */
+    #help-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    #help-overlay[hidden] { display: none; }
+    #help-modal {
+      position: relative;
+      background: var(--surface);
+      color: var(--text-1);
+      width: min(680px, 92vw);
+      max-height: 86vh;
+      overflow-y: auto;
+      border-radius: 10px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+      padding: 24px 28px 28px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    #help-modal h2 { font-size: 18px; margin-bottom: 12px; }
+    #help-modal h3 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--accent);
+      margin: 18px 0 6px;
+    }
+    #help-modal ul { margin: 0 0 4px; padding-left: 20px; }
+    #help-modal li { margin: 3px 0; }
+    #help-modal code {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0 4px;
+      font-size: 12px;
+    }
+    #help-close {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: none;
+      font-size: 22px;
+      line-height: 1;
+      color: var(--text-3);
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    #help-close:hover { background: var(--bg); color: var(--text-1); }
 
     #zoom-display {
       font-size: 12px;
@@ -532,6 +637,7 @@
       height: 1px;
     }
 
+
     #canvas-svg path.temp-connection {
       fill: none;
       stroke: #cbd5e0;
@@ -554,12 +660,27 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 5;
-      pointer-events: none;
+      z-index: 25;
+      pointer-events: auto;
+      cursor: pointer;
       user-select: none;
       line-height: 1;
       box-shadow: 0 1px 3px rgba(99, 102, 241, 0.4);
       font-variant-numeric: tabular-nums;
+    }
+    .node-seq:hover { box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35), 0 1px 3px rgba(99, 102, 241, 0.4); }
+    .node-seq--editing {
+      width: auto;
+      min-width: 18px;
+      padding: 0 5px;
+      border-radius: 9px;
+      background: #fff;
+      color: var(--text-1);
+      border: 1px solid var(--accent);
+      cursor: text;
+      outline: none;
+      user-select: text;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
     }
 
     /* ── Nodes ── */
@@ -1063,6 +1184,15 @@
       color: var(--accent-h);
     }
 
+    /* Links rendered inline inside a block's description. */
+    .node-desc a.node-link {
+      font-size: inherit;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      max-width: 100%;
+      pointer-events: all;
+    }
+
     /* ── Ports ── */
     .port {
       position: absolute;
@@ -1073,7 +1203,8 @@
       border: 2px solid var(--accent);
       opacity: 0;
       cursor: crosshair;
-      z-index: 10;
+      /* Above the full-side resize strips so the port dots stay clickable. */
+      z-index: 16;
       transition: opacity 0.1s, transform 0.1s;
     }
 
@@ -1239,11 +1370,17 @@
       transform: translate(-50%, -50%);
     }
 
-    .node.sole-selected .resize-handle {
+    .node.sole-selected .resize-handle,
+    .group-rect.selected .resize-handle {
       opacity: 1;
       pointer-events: all;
     }
 
+    /* A group's border strips are always clickable so clicking the dotted line
+       selects the group (they stay invisible until the group is selected). */
+    .group-rect .resize-handle { pointer-events: all; }
+
+    /* Group-resize box keeps the small left/right dot handles. */
     .resize-handle[data-handle="rc"] {
       top: 50%;
       left: 100%;
@@ -1256,14 +1393,40 @@
       cursor: ew-resize;
     }
 
-    .node .resize-handle[data-handle="tl"],
-    .node .resize-handle[data-handle="tc"],
-    .node .resize-handle[data-handle="tr"],
-    .node .resize-handle[data-handle="br"],
-    .node .resize-handle[data-handle="bc"],
-    .node .resize-handle[data-handle="bl"] {
-      display: none;
+    /* On a selected node or group box, the whole border is grabbable: each side
+       is a full-length resize strip, with visible corner handles for both axes. */
+    :is(.node, .group-rect) .resize-handle { transform: none; }
+
+    :is(.node, .group-rect) .resize-handle[data-handle="tc"],
+    :is(.node, .group-rect) .resize-handle[data-handle="bc"],
+    :is(.node, .group-rect) .resize-handle[data-handle="lc"],
+    :is(.node, .group-rect) .resize-handle[data-handle="rc"] {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      z-index: 12;
     }
+    :is(.node, .group-rect) .resize-handle[data-handle="tc"],
+    :is(.node, .group-rect) .resize-handle[data-handle="bc"] { left: 0; width: 100%; height: 10px; cursor: ns-resize; }
+    :is(.node, .group-rect) .resize-handle[data-handle="tc"] { top: -5px; }
+    :is(.node, .group-rect) .resize-handle[data-handle="bc"] { top: auto; bottom: -5px; }
+    :is(.node, .group-rect) .resize-handle[data-handle="lc"],
+    :is(.node, .group-rect) .resize-handle[data-handle="rc"] { top: 0; height: 100%; width: 10px; cursor: ew-resize; }
+    :is(.node, .group-rect) .resize-handle[data-handle="lc"] { left: -5px; }
+    :is(.node, .group-rect) .resize-handle[data-handle="rc"] { left: auto; right: -5px; }
+
+    :is(.node, .group-rect) .resize-handle[data-handle="tl"],
+    :is(.node, .group-rect) .resize-handle[data-handle="tr"],
+    :is(.node, .group-rect) .resize-handle[data-handle="bl"],
+    :is(.node, .group-rect) .resize-handle[data-handle="br"] {
+      width: 11px;
+      height: 11px;
+      z-index: 19;
+    }
+    :is(.node, .group-rect) .resize-handle[data-handle="tl"] { top: -5px; left: -5px; cursor: nwse-resize; }
+    :is(.node, .group-rect) .resize-handle[data-handle="tr"] { top: -5px; left: auto; right: -5px; cursor: nesw-resize; }
+    :is(.node, .group-rect) .resize-handle[data-handle="bl"] { top: auto; bottom: -5px; left: -5px; cursor: nesw-resize; }
+    :is(.node, .group-rect) .resize-handle[data-handle="br"] { top: auto; bottom: -5px; left: auto; right: -5px; cursor: nwse-resize; }
 
     /* ── Group resize box ── */
     .group-resize-box {
@@ -1279,14 +1442,6 @@
       pointer-events: all;
       background: var(--accent);
       border-color: var(--surface);
-    }
-
-    #canvas-container.select-mode {
-      cursor: crosshair;
-    }
-
-    #canvas-container.select-mode .node {
-      cursor: pointer;
     }
 
     /* ── Properties Panel ── */
@@ -1440,6 +1595,119 @@
       box-shadow: 0 0 0 2px var(--accent);
     }
 
+    /* ── Ctrl+drag to draw a process block ── */
+    .draw-node-ghost {
+      position: absolute;
+      border: 1.5px solid var(--accent);
+      background: var(--surface);
+      box-shadow: var(--node-shadow);
+      pointer-events: none;
+      z-index: 6;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--text-2);
+      opacity: 0.85;
+    }
+    #canvas-container.drawing-node,
+    #canvas-container.ctrl-draw { cursor: crosshair; }
+
+    /* ── Group boxes (Ctrl+Shift+drag) ── */
+    .group-rect-ghost {
+      position: absolute;
+      border: 2px dotted var(--accent);
+      background: rgba(99, 102, 241, 0.05);
+      border-radius: 6px;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .group-rect {
+      position: absolute;
+      border: 2px dotted var(--border-md);
+      background: transparent;
+      border-radius: 6px;
+      box-sizing: border-box;
+      pointer-events: none;   /* clicks pass through to the blocks inside */
+    }
+    .group-rect.selected {
+      border-color: var(--accent);
+    }
+    .group-rect-label {
+      position: absolute;
+      top: -11px;
+      left: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      padding: 1px 8px;
+      cursor: move;
+      pointer-events: all;    /* the grab / select / rename handle */
+      user-select: none;
+      white-space: nowrap;
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      z-index: 14;            /* keep the tab clickable above the blocks */
+    }
+
+    /* ── Right-click colour menu ── */
+    .ctx-menu {
+      position: fixed;
+      background: var(--surface);
+      border: 1px solid var(--border-md);
+      border-radius: var(--radius);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+      padding: 8px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      user-select: none;
+    }
+    .ctx-swatches {
+      display: grid;
+      grid-template-columns: repeat(5, 22px);
+      gap: 6px;
+    }
+    .ctx-swatch {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      border: 1px solid var(--border-md);
+      cursor: pointer;
+      padding: 0;
+      transition: transform 0.08s;
+    }
+    .ctx-swatch:hover { transform: scale(1.12); }
+    .ctx-swatch.active { box-shadow: 0 0 0 2px var(--accent); }
+    .ctx-row { display: flex; align-items: center; gap: 8px; }
+    .ctx-row input[type="color"] {
+      width: 30px;
+      height: 26px;
+      padding: 0;
+      border: 1px solid var(--border-md);
+      border-radius: 4px;
+      background: none;
+      cursor: pointer;
+    }
+    .ctx-default {
+      flex: 1;
+      font-size: 12px;
+      font-family: var(--font);
+      padding: 4px 8px;
+      border: 1px solid var(--border-md);
+      border-radius: 4px;
+      background: var(--surface);
+      color: var(--text-1);
+      cursor: pointer;
+    }
+    .ctx-default:hover { background: var(--bg); }
+
     /* ── Sidebar divider ── */
     .sidebar-divider {
       height: 1px;
@@ -1566,78 +1834,56 @@
 <body>
 
   <div id="toolbar">
-    <h1>Flow Builder</h1>
+    <h1>Canvas</h1>
+    <input type="text" id="diagram-name" class="diagram-name" value="flow-diagram" spellcheck="false"
+      title="Name used when you Save PNG / SVG / Diagram">
     <div class="toolbar-sep"></div>
-    <button class="toolbar-btn" id="btn-undo" title="Ctrl+Z">Undo</button>
-    <button class="toolbar-btn" id="btn-redo" title="Ctrl+Y / Ctrl+Shift+Z">Redo</button>
-    <div class="toolbar-sep"></div>
-    <button class="toolbar-btn" id="btn-zoom-out" title="Zoom out" style="padding:5px 8px;">&#8722;</button>
-    <span id="zoom-display">100%</span>
-    <button class="toolbar-btn" id="btn-zoom-in" title="Zoom in" style="padding:5px 8px;">&#43;</button>
+
+    <div class="toolbar-menu">
+      <button type="button" class="toolbar-btn toolbar-menu-trigger">Edit<span class="tb-caret">&#9662;</span></button>
+      <div class="toolbar-dropdown">
+        <button class="toolbar-btn" id="btn-undo" title="Ctrl+Z">Undo</button>
+        <button class="toolbar-btn" id="btn-redo" title="Ctrl+Y / Ctrl+Shift+Z">Redo</button>
+      </div>
+    </div>
+
+    <div class="toolbar-menu">
+      <button type="button" class="toolbar-btn toolbar-menu-trigger">View<span class="tb-caret">&#9662;</span></button>
+      <div class="toolbar-dropdown">
+        <button class="toolbar-btn" id="btn-zoom-in" title="Zoom in">Zoom In</button>
+        <button class="toolbar-btn" id="btn-zoom-out" title="Zoom out">Zoom Out</button>
+      </div>
+    </div>
     <button class="toolbar-btn" id="btn-reset-view" title="Reset view">Reset View</button>
-    <div class="toolbar-sep"></div>
-    <button class="toolbar-btn" id="btn-select-mode" title="Drag to box-select multiple nodes">Select</button>
-    <button class="toolbar-btn" id="btn-bring-front" title="Bring selected nodes to front">⤴ Front</button>
-    <button class="toolbar-btn" id="btn-send-back" title="Send selected nodes to back">⤵ Back</button>
-    <button class="toolbar-btn" id="btn-delete">Delete</button>
-    <button class="toolbar-btn danger" id="btn-clear">Clear All</button>
-    <div class="toolbar-sep"></div>
-    <button class="toolbar-btn" id="btn-export-png">Save PNG</button>
-    <button class="toolbar-btn" id="btn-export-svg">Save SVG</button>
-    <button class="toolbar-btn" id="btn-export">Save Diagram</button>
-    <button class="toolbar-btn" id="btn-import">Open Diagram</button>
-    <div class="toolbar-sep"></div>
-    <button class="toolbar-btn" id="btn-theme" title="Toggle dark mode">Dark</button>
+    <span id="zoom-display">100%</span>
+
+    <div class="toolbar-menu">
+      <button type="button" class="toolbar-btn toolbar-menu-trigger">Arrange<span class="tb-caret">&#9662;</span></button>
+      <div class="toolbar-dropdown">
+        <button class="toolbar-btn" id="btn-bring-front" title="Bring selected nodes to front">Front</button>
+        <button class="toolbar-btn" id="btn-send-back" title="Send selected nodes to back">Back</button>
+        <button class="toolbar-btn" id="btn-delete">Delete</button>
+        <button class="toolbar-btn danger" id="btn-clear">Clear All</button>
+      </div>
+    </div>
+
+    <div class="toolbar-menu">
+      <button type="button" class="toolbar-btn toolbar-menu-trigger">File<span class="tb-caret">&#9662;</span></button>
+      <div class="toolbar-dropdown">
+        <button class="toolbar-btn" id="btn-export-png">Save PNG</button>
+        <button class="toolbar-btn" id="btn-export-svg">Save SVG</button>
+        <button class="toolbar-btn" id="btn-export">Save Diagram</button>
+        <button class="toolbar-btn" id="btn-import">Open Diagram</button>
+      </div>
+    </div>
+
+    <div class="toolbar-spacer"></div>
+    <button class="toolbar-btn" id="btn-download-app" title="Download this app as a standalone HTML file">Download App</button>
+    <button class="toolbar-btn" id="btn-fullscreen" title="Full screen view (Esc to exit)">Full Screen</button>
+    <button class="toolbar-btn" id="btn-help" title="How to use">Help</button>
   </div>
 
   <div id="app">
-
-    <aside id="sidebar">
-      <h2>Components</h2>
-
-      <div class="palette-item" data-type="start" title="Drag to canvas — shortcut: Ctrl+S">
-        <div class="palette-preview start-end"></div>
-        Start <span class="palette-key">Ctrl+S</span>
-      </div>
-
-      <div class="palette-item" data-type="end" title="Drag to canvas — shortcut: Ctrl+E">
-        <div class="palette-preview start-end"></div>
-        End <span class="palette-key">Ctrl+E</span>
-      </div>
-
-      <div class="palette-item" data-type="process" title="Drag to canvas — shortcut: Ctrl+P">
-        <div class="palette-preview process"></div>
-        Process <span class="palette-key">Ctrl+P</span>
-      </div>
-
-      <div class="palette-item" data-type="decision" title="Drag to canvas — shortcut: Ctrl+D">
-        <div class="palette-preview decision"></div>
-        Decision <span class="palette-key">Ctrl+D</span>
-      </div>
-
-      <div class="palette-item" data-type="note" title="Drag to canvas — shortcut: Ctrl+N">
-        <div class="palette-preview note"></div>
-        Note <span class="palette-key">Ctrl+N</span>
-      </div>
-
-      <div class="sidebar-divider"></div>
-
-      <div class="palette-item" data-type="database" title="Drag to canvas — shortcut: Ctrl+B">
-        <div class="palette-preview database"></div>
-        Database <span class="palette-key">Ctrl+B</span>
-      </div>
-
-      <div class="palette-item" data-type="api" title="Drag to canvas — shortcut: Ctrl+A">
-        <div class="palette-preview api"></div>
-        API Call <span class="palette-key">Ctrl+A</span>
-      </div>
-
-      <div class="palette-item" data-type="queue" title="Drag to canvas — shortcut: Ctrl+Q">
-        <div class="palette-preview queue"></div>
-        Queue <span class="palette-key">Ctrl+Q</span>
-      </div>
-
-    </aside>
 
     <div id="canvas-container">
       <div id="canvas-world">
@@ -1658,75 +1904,62 @@
       </div>
     </div>
 
-    <aside id="props-panel">
-      <h2>Properties</h2>
-      <div id="props-empty">Select a component to edit its properties.</div>
-      <div id="props-form">
-        <div class="props-type-row">
-          <span id="props-node-type"></span>
-          <div class="field-group field-group--seq">
-            <label for="prop-seq">#</label>
-            <input type="number" id="prop-seq" min="1" step="1" placeholder="1">
-          </div>
-        </div>
-        <div class="field-group">
-          <label for="prop-label">Label</label>
-          <input type="text" id="prop-label" placeholder="Component label…">
-        </div>
-        <div class="field-group">
-          <label for="prop-notes">Notes</label>
-          <textarea id="prop-notes" placeholder="Add notes or description…"></textarea>
-        </div>
-        <div class="field-group">
-          <label for="prop-team">Response Team</label>
-          <input type="text" id="prop-team" placeholder="Team or owner name…">
-        </div>
-        <div class="field-group field-group--inline">
-          <label for="prop-locked" class="checkbox-label">
-            <input type="checkbox" id="prop-locked">
-            <span>Lock position</span>
-          </label>
-        </div>
-        <div class="field-group">
-          <label for="prop-color">Color</label>
-          <div class="color-row">
-            <input type="color" id="prop-color" value="#ffffff">
-            <button type="button" class="props-add-link-btn" id="btn-reset-color">Reset</button>
-          </div>
-        </div>
-        <div id="props-db-section">
-          <div class="field-group">
-            <label for="prop-db-server">DB Server</label>
-            <input type="text" id="prop-db-server" placeholder="host:port / connection string…">
-          </div>
-        </div>
-        <div id="props-api-section">
-          <div class="field-group">
-            <label for="prop-api-url">API URL</label>
-            <input type="text" id="prop-api-url" placeholder="https://api.example.com/endpoint">
-          </div>
-          <div class="field-group">
-            <label for="prop-api-request">Request</label>
-            <textarea id="prop-api-request" placeholder="Method, endpoint, headers, body…"></textarea>
-          </div>
-          <div class="field-group">
-            <label for="prop-api-response">Response</label>
-            <textarea id="prop-api-response" placeholder="Status code, body…"></textarea>
-          </div>
-        </div>
-        <div class="field-group" id="props-links-group">
-          <div class="props-links-header">
-            <label>Links</label>
-            <button class="props-add-link-btn" id="btn-add-link">+ Add</button>
-          </div>
-          <div id="props-links-list"></div>
-        </div>
-      </div>
-    </aside>
-
   </div>
 
   <input type="file" id="import-file-input" accept=".json" style="display:none">
+
+  <!-- How-to guide -->
+  <div id="help-overlay" hidden>
+    <div id="help-modal" role="dialog" aria-label="How to use">
+      <button id="help-close" title="Close (Esc)" aria-label="Close">&times;</button>
+      <h2>How to use Canvas</h2>
+
+      <h3>Create blocks</h3>
+      <ul>
+        <li><b>Ctrl + drag</b> on empty canvas to draw a process block at the size you want.</li>
+        <li><b>Ctrl + click</b> drops a default process block.</li>
+        <li>Keyboard: <b>Ctrl + P</b> process, <b>S</b> start, <b>E</b> end, <b>D</b> decision, <b>N</b> note, <b>B</b> database, <b>A</b> API, <b>Q</b> queue (block appears at the cursor).</li>
+      </ul>
+
+      <h3>Edit a block</h3>
+      <ul>
+        <li><b>Double-click</b> the title or description to edit it in place (Enter adds a new line, click away to finish).</li>
+        <li><b>Right-click</b> a block to pick a colour (swatches, a custom colour, or Default).</li>
+        <li>Select a block and drag any <b>side or corner</b> to resize it.</li>
+        <li>Add links in the description: a line like <code>L - Label - https://…</code> becomes a clickable link, and bare URLs auto-link. Links stay clickable in the exported SVG.</li>
+      </ul>
+
+      <h3>Connect blocks</h3>
+      <ul>
+        <li>Select a block and click its <b>→</b> button, then click the target block. Hold <b>Space</b> and drag to pan to an off-screen block, then click it.</li>
+        <li>Or drag from one of a block's edge <b>dots</b> onto another block's dot.</li>
+        <li>Select a connection to get endpoint dots (drag to re-anchor) and a hollow midpoint dot (drag out to add a <b>bend point</b>). Double-click a bend point to remove it.</li>
+        <li><b>Double-click</b> a connection to add a multi-line label.</li>
+      </ul>
+
+      <h3>Select &amp; move</h3>
+      <ul>
+        <li><b>Alt + drag</b> (or Shift + drag) on empty canvas to box-select blocks and groups.</li>
+        <li><b>Alt/Shift + click</b> a block toggles it in the selection.</li>
+        <li>Drag to move; <b>Delete</b> removes the selection. <b>Ctrl+Z</b> / <b>Ctrl+Y</b> undo / redo.</li>
+        <li>Pan: drag empty canvas or hold <b>Space</b> and drag. Zoom: <b>mouse wheel</b>.</li>
+      </ul>
+
+      <h3>Groups</h3>
+      <ul>
+        <li><b>Ctrl + Shift + drag</b> to draw a dotted group box around blocks.</li>
+        <li>Click the group's <b>label</b> or its <b>border line</b> to select it; double-click the label to rename.</li>
+        <li>Drag the label to move the group with its blocks; drag a side/corner to resize.</li>
+      </ul>
+
+      <h3>Save &amp; share</h3>
+      <ul>
+        <li>Set the file name in the top-left field — it's used by <b>Save PNG</b>, <b>Save SVG</b>, and <b>Save Diagram</b>.</li>
+        <li><b>Save Diagram</b> writes an editable <code>.json</code>; <b>Open Diagram</b> loads it back.</li>
+        <li><b>Full Screen</b> shows just the canvas (Esc to exit).</li>
+      </ul>
+    </div>
+  </div>
 
   <!-- <script src="script.js"></script> -->
   <script>
@@ -1778,6 +2011,30 @@
         ghost: null
       },
 
+      // Ctrl/Cmd + drag on empty canvas → draw a process block of that size.
+      drawNode: {
+        active: false,
+        startX: 0,
+        startY: 0,
+        element: null
+      },
+
+      // Ctrl/Cmd + Shift + drag → draw a dotted group box around blocks.
+      drawGroup: {
+        active: false,
+        startX: 0,
+        startY: 0,
+        element: null
+      },
+
+      // Dragging a group box (by its label) — moves the box and the blocks in it.
+      groupDrag: { active: false },
+      // Resizing a group box by one of its side/corner handles.
+      groupBoxResize: { active: false },
+
+      groups: {},
+      selectedGroupIds: new Set(),
+
       resizing: {
         active: false,
         nodeId: null,
@@ -1797,7 +2054,6 @@
       connectMode: { fromNodeId: null },
       zoom: 1,
       seqCounter: 0,
-      selectMode: false,
 
       groupResize: {
         active: false,
@@ -1879,8 +2135,6 @@
     // ── DOM refs ───────────────────────────────────────────────────────────────
 
     let canvasContainer, canvasWorld, canvasNodes, canvasSvg;
-    let propsEmpty, propsForm, propsNodeType;
-    let propSeq, propLabel, propNotes, propTeam, propDbServer, propApiUrl, propApiRequest, propApiResponse;
     let zoomDisplay;
 
     // ── Node dimensions ────────────────────────────────────────────────────────
@@ -1946,22 +2200,10 @@
       canvasWorld = document.getElementById('canvas-world');
       canvasNodes = document.getElementById('canvas-nodes');
       canvasSvg = document.getElementById('canvas-svg');
-      propsEmpty = document.getElementById('props-empty');
-      propsForm = document.getElementById('props-form');
-      propsNodeType = document.getElementById('props-node-type');
-      propSeq = document.getElementById('prop-seq');
-      propLabel = document.getElementById('prop-label');
-      propNotes = document.getElementById('prop-notes');
-      propTeam = document.getElementById('prop-team');
-      propDbServer = document.getElementById('prop-db-server');
-      propApiUrl = document.getElementById('prop-api-url');
-      propApiRequest = document.getElementById('prop-api-request');
-      propApiResponse = document.getElementById('prop-api-response');
       zoomDisplay = document.getElementById('zoom-display');
 
-      document.querySelectorAll('.palette-item').forEach(item => {
-        item.addEventListener('mousedown', onPaletteMouseDown);
-      });
+      const nameInput = document.getElementById('diagram-name');
+      if (nameInput) nameInput.addEventListener('input', scheduleAutosave);
 
       canvasContainer.addEventListener('mousedown', onContainerMouseDown);
       canvasNodes.addEventListener('mousedown', onCanvasMouseDown);
@@ -1974,72 +2216,10 @@
       document.addEventListener('keydown', onKeyDown);
       document.addEventListener('keyup', onKeyUp);
 
-      // Prevent context menu on middle-click
-      canvasContainer.addEventListener('contextmenu', e => e.preventDefault());
-
-      propSeq.addEventListener('focus', onPropFocus);
-      propSeq.addEventListener('blur', onPropBlur);
-      propSeq.addEventListener('input', () => onPropsInput('seq', propSeq.value));
-      propLabel.addEventListener('focus', onPropFocus);
-      propNotes.addEventListener('focus', onPropFocus);
-      propTeam.addEventListener('focus', onPropFocus);
-      propDbServer.addEventListener('focus', onPropFocus);
-      propDbServer.addEventListener('blur', onPropBlur);
-      propDbServer.addEventListener('input', () => onPropsInput('dbServer', propDbServer.value));
-      propApiUrl.addEventListener('focus', onPropFocus);
-      propApiRequest.addEventListener('focus', onPropFocus);
-      propApiResponse.addEventListener('focus', onPropFocus);
-      propLabel.addEventListener('blur', onPropBlur);
-      propNotes.addEventListener('blur', onPropBlur);
-      propTeam.addEventListener('blur', onPropBlur);
-      propApiUrl.addEventListener('blur', onPropBlur);
-      propApiRequest.addEventListener('blur', onPropBlur);
-      propApiResponse.addEventListener('blur', onPropBlur);
-      propLabel.addEventListener('input', () => onPropsInput('label', propLabel.value));
-      propNotes.addEventListener('input', () => onPropsInput('notes', propNotes.value));
-      propTeam.addEventListener('input', () => onPropsInput('responseTeam', propTeam.value));
-      propApiUrl.addEventListener('input', () => onPropsInput('apiUrl', propApiUrl.value));
-      propApiRequest.addEventListener('input', () => onPropsInput('apiRequest', propApiRequest.value));
-      propApiResponse.addEventListener('input', () => onPropsInput('apiResponse', propApiResponse.value));
-      document.getElementById('btn-add-link').addEventListener('click', onAddLink);
-      document.getElementById('prop-color').addEventListener('input', e => {
-        if (state.selectedNodeIds.size !== 1) return;
-        const id = [...state.selectedNodeIds][0];
-        const n = state.nodes[id];
-        if (!n) return;
-        const prev = n.customColor || null;
-        n.customColor = e.target.value;
-        applyNodeColor(n);
-        if (prev !== n.customColor) pushUndo(() => { n.customColor = prev; applyNodeColor(n); });
-      });
-      document.getElementById('btn-reset-color').addEventListener('click', () => {
-        if (state.selectedNodeIds.size !== 1) return;
-        const id = [...state.selectedNodeIds][0];
-        const n = state.nodes[id];
-        if (!n || !n.customColor) return;
-        const prev = n.customColor;
-        n.customColor = null;
-        applyNodeColor(n);
-        document.getElementById('prop-color').value = '#ffffff';
-        pushUndo(() => { n.customColor = prev; applyNodeColor(n); });
-      });
-      document.getElementById('prop-locked').addEventListener('change', e => {
-        if (state.selectedNodeIds.size !== 1) return;
-        const id = [...state.selectedNodeIds][0];
-        const n = state.nodes[id];
-        if (!n) return;
-        const prev = !!n.locked;
-        n.locked = e.target.checked;
-        n.element.classList.toggle('node--locked', n.locked);
-        pushUndo(() => {
-          const nn = state.nodes[id];
-          if (!nn) return;
-          nn.locked = prev;
-          nn.element.classList.toggle('node--locked', prev);
-          const cb = document.getElementById('prop-locked');
-          if (cb && state.selectedNodeIds.has(id)) cb.checked = prev;
-        });
-      });
+      // Right-click a block to recolour it; otherwise just suppress the menu.
+      canvasContainer.addEventListener('contextmenu', onContextMenu);
+      // Holding Ctrl should drop the "ctrl-draw" affordance if focus leaves the window.
+      window.addEventListener('blur', () => canvasContainer.classList.remove('ctrl-draw'));
 
       document.getElementById('btn-undo').addEventListener('click', undo);
       document.getElementById('btn-redo').addEventListener('click', redo);
@@ -2048,13 +2228,12 @@
       document.getElementById('btn-reset-view').addEventListener('click', resetView);
       document.getElementById('btn-export-png').addEventListener('click', exportPNG);
       document.getElementById('btn-export-svg').addEventListener('click', exportSVG);
-      document.getElementById('btn-select-mode').addEventListener('click', toggleSelectMode);
       document.getElementById('btn-bring-front').addEventListener('click', () => reorderSelected('front'));
       document.getElementById('btn-send-back').addEventListener('click', () => reorderSelected('back'));
-      document.getElementById('btn-theme').addEventListener('click', toggleTheme);
-      const savedTheme = (() => { try { return localStorage.getItem('flow:theme'); } catch { return null; } })();
-      if (savedTheme === 'dark') document.documentElement.classList.add('dark');
-      updateThemeButton();
+      document.getElementById('btn-fullscreen').addEventListener('click', toggleFullscreen);
+      document.addEventListener('fullscreenchange', updateFullscreenButton);
+      document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+      updateFullscreenButton();
       document.getElementById('btn-delete').addEventListener('click', deleteSelected);
       document.getElementById('btn-clear').addEventListener('click', clearAll);
       document.getElementById('btn-export').addEventListener('click', exportDiagram);
@@ -2062,6 +2241,20 @@
         document.getElementById('import-file-input').click()
       );
       document.getElementById('import-file-input').addEventListener('change', importDiagram);
+
+      // Help guide
+      document.getElementById('btn-help').addEventListener('click', () => openHelp(true));
+      document.getElementById('help-close').addEventListener('click', () => openHelp(false));
+      document.getElementById('help-overlay').addEventListener('mousedown', e => {
+        if (e.target.id === 'help-overlay') openHelp(false);
+      });
+
+      // Download-app button is omitted from the downloaded copy, so guard it.
+      const dlBtn = document.getElementById('btn-download-app');
+      if (dlBtn) dlBtn.addEventListener('click', downloadApp);
+
+      addToolbarIcons();
+      setupToolbarMenus();
 
       window.addEventListener('beforeunload', e => {
         if (Object.keys(state.nodes).length > 0) {
@@ -2153,10 +2346,29 @@
 
     // ── Notes formatter ───────────────────────────────────────────────────────
 
+    const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const escAttr = s => esc(s).replace(/"/g, '&quot;');
+
+    function linkAnchor(label, url) {
+      const u = url.trim();
+      return `<a class="node-link" href="${escAttr(u)}" target="_blank" rel="noopener noreferrer" title="${escAttr(u)}">${esc(label.trim() || u)}</a>`;
+    }
+
+    // Escape a text fragment and turn any bare http(s):// URL inside it into a link.
+    function linkifyText(text) {
+      const re = /(https?:\/\/[^\s<>"]+)/g;
+      let out = '', last = 0, m;
+      while ((m = re.exec(text))) {
+        out += esc(text.slice(last, m.index));
+        out += linkAnchor(m[1], m[1]);
+        last = re.lastIndex;
+      }
+      out += esc(text.slice(last));
+      return out;
+    }
+
     function formatNotes(raw) {
       if (!raw || !raw.trim()) return '';
-
-      const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
       const lines = raw.split('\n');
       let html = '';
@@ -2164,14 +2376,20 @@
 
       for (const line of lines) {
         const trimmed = line.trim();
+        // "L - label - URL" → a labelled clickable link.
+        const linkM = trimmed.match(/^L\s*-\s*(.+?)\s*-\s*(\S.*)$/i);
+        if (linkM) {
+          if (inList) { html += '</ul>'; inList = false; }
+          html += linkAnchor(linkM[1], linkM[2]) + '<br>';
+          continue;
+        }
         const bullet = trimmed.match(/^[-*•]\s+(.*)/);
-
         if (bullet) {
           if (!inList) { html += '<ul>'; inList = true; }
-          html += `<li>${esc(bullet[1])}</li>`;
+          html += `<li>${linkifyText(bullet[1])}</li>`;
         } else {
           if (inList) { html += '</ul>'; inList = false; }
-          html += trimmed ? `<span>${esc(trimmed)}</span><br>` : '<br>';
+          html += trimmed ? `<span>${linkifyText(trimmed)}</span><br>` : '<br>';
         }
       }
 
@@ -2185,6 +2403,11 @@
       const trimmed = (notes || '').trim();
       descEl.innerHTML = trimmed ? formatNotes(notes) : '';
       descEl.classList.toggle('is-empty', !trimmed);
+      // Links must be clickable without starting a node drag/select.
+      descEl.querySelectorAll('a').forEach(a => {
+        a.addEventListener('mousedown', e => e.stopPropagation());
+        a.addEventListener('click', e => e.stopPropagation());
+      });
     }
 
     function renderNodeLinks(el, links) {
@@ -2235,7 +2458,10 @@
       el.style.height = 'auto';
       const natural = el.offsetHeight;
       const min = getMinDims(node.type);
-      const newH = collapsed ? Math.max(36, natural) : Math.max(min.h, natural);
+      // A user-set height (from drawing or dragging a top/bottom handle) acts as a
+      // floor — the block keeps that height but still grows for longer content.
+      const floor = collapsed ? 36 : Math.max(min.h, node.manualHeight || 0);
+      const newH = Math.max(floor, natural);
       el.style.height = newH + 'px';
       if (node.height !== newH) {
         node.height = newH;
@@ -2255,11 +2481,7 @@
         label: getDefaultLabel(type),
         notes: '',
         responseTeam: '',
-        links: [
-          { name: 'GitHub', url: '' },
-          { name: 'Jira', url: '' },
-          { name: 'Folder Path', url: '' },
-        ],
+        links: [],
         dbServer: '',
         apiUrl: '',
         apiRequest: '',
@@ -2267,6 +2489,7 @@
         collapsed: false,
         locked: false,
         customColor: null,
+        manualHeight: null,
         x, y,
         width: dims.width,
         height: dims.height,
@@ -2313,10 +2536,20 @@
       el.style.width = node.width + 'px';
       el.style.height = node.height + 'px';
 
-      // Sequence badge
+      // Sequence badge — double-click to renumber (cascades to the rest)
       const seqEl = document.createElement('span');
       seqEl.className = 'node-seq';
       seqEl.textContent = node.seq || '';
+      seqEl.title = 'Double-click to change the step number';
+      // Reserve the badge's own clicks so the node behind it doesn't start a
+      // drag/resize/select — the badge is for double-click editing only. (It sits
+      // above the resize handles via z-index so the dblclick reliably lands here.)
+      seqEl.addEventListener('mousedown', e => e.stopPropagation());
+      seqEl.addEventListener('dblclick', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        startSeqEdit(el.dataset.nodeId);
+      });
       el.appendChild(seqEl);
 
       const label = document.createElement('span');
@@ -2362,9 +2595,6 @@
         startNotesEdit(node.id, e.clientX, e.clientY);
       });
 
-      const linksEl = document.createElement('div');
-      linksEl.className = 'node-links';
-
       if (node.type !== 'decision' && node.type !== 'process') {
         // Collapsible extra content wrapper
         const extraEl = document.createElement('div');
@@ -2399,13 +2629,11 @@
           extraEl.appendChild(sectionsEl);
         }
 
-        extraEl.appendChild(linksEl);
         el.appendChild(extraEl);
 
         // Fill content now that elements are in the DOM tree
         if (node.type === 'database') setDbServer(el, node.dbServer);
         if (node.type === 'api') { setApiUrl(el, node.apiUrl); setApiSections(el, node.apiRequest, node.apiResponse); }
-        renderNodeLinks(el, node.links || []);
 
         // Collapse toggle
         const toggleBtn = document.createElement('button');
@@ -2427,8 +2655,6 @@
       } else {
         // decision & process: no accordion — description always shown in full
         el.appendChild(desc);
-        el.appendChild(linksEl);
-        renderNodeLinks(el, node.links || []);
       }
 
       el.addEventListener('dblclick', e => {
@@ -2532,6 +2758,7 @@
         collapsed: n.collapsed || false,
         locked: n.locked || false,
         customColor: n.customColor || null,
+        manualHeight: n.manualHeight || null,
         x: n.x, y: n.y, width: n.width, height: n.height
       };
     }
@@ -2594,9 +2821,7 @@
             if (!n) return;
             n.label = oldLabel;
             setNodeLabelText(n.element, oldLabel);
-            if (state.selectedNodeIds.has(nodeId)) propLabel.value = oldLabel;
           });
-          if (state.selectedNodeIds.has(nodeId)) propLabel.value = newLabel;
         }
       }
 
@@ -2615,6 +2840,78 @@
       });
     }
 
+    // Inline-edit the step number on a node. Committing renumbers every node so
+    // the sequence stays contiguous 1..N (see moveNodeToSeq).
+    function startSeqEdit(nodeId) {
+      const node = state.nodes[nodeId];
+      if (!node) return;
+      const seqEl = node.element.querySelector('.node-seq');
+      if (!seqEl || seqEl.contentEditable === 'true') return;
+
+      seqEl.contentEditable = 'true';
+      seqEl.classList.add('node-seq--editing');
+      seqEl.focus();
+
+      const range = document.createRange();
+      range.selectNodeContents(seqEl);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      let done = false;
+
+      function finish(commit) {
+        if (done) return;
+        done = true;
+        seqEl.removeEventListener('blur', onBlur);
+        seqEl.contentEditable = 'false';
+        seqEl.classList.remove('node-seq--editing');
+        const target = parseInt((seqEl.textContent || '').trim(), 10);
+        if (commit && !isNaN(target) && target !== node.seq) {
+          moveNodeToSeq(nodeId, target);   // updates every badge, incl. this one
+        } else {
+          seqEl.textContent = node.seq || '';
+        }
+      }
+
+      function onBlur() { finish(true); }
+
+      seqEl.addEventListener('blur', onBlur);
+      seqEl.addEventListener('keydown', e => {
+        e.stopPropagation();
+        if (e.key === 'Enter') { e.preventDefault(); seqEl.blur(); }
+        else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+      });
+    }
+
+    // Move a node to a new step number, then renumber the rest 1..N so numbering
+    // stays contiguous. Reversible via the seq snapshot + restoreSeqs.
+    function moveNodeToSeq(nodeId, targetSeq) {
+      const node = state.nodes[nodeId];
+      if (!node) return;
+
+      const ordered = Object.values(state.nodes).sort((a, b) => (a.seq || 0) - (b.seq || 0));
+      const before = ordered.map(n => ({ id: n.id, seq: n.seq }));
+      const curIdx = ordered.indexOf(node);
+      if (curIdx === -1) return;
+
+      const dest = Math.max(1, Math.min(ordered.length, targetSeq)) - 1;
+      ordered.splice(curIdx, 1);
+      ordered.splice(dest, 0, node);
+
+      let changed = false;
+      ordered.forEach((n, i) => {
+        const ns = i + 1;
+        if (n.seq !== ns) changed = true;
+        n.seq = ns;
+        const sEl = n.element.querySelector('.node-seq');
+        if (sEl) sEl.textContent = ns;
+      });
+      state.seqCounter = ordered.length;
+
+      if (changed) pushUndo(() => restoreSeqs(before));
+    }
+
     function startNotesEdit(nodeId, clickX, clickY) {
       const node = state.nodes[nodeId];
       if (!node) return;
@@ -2628,6 +2925,9 @@
       descEl.classList.add('editing');
       descEl.textContent = oldNotes;
       descEl.contentEditable = 'true';
+      // Editing shows the raw text (e.g. full "L - label - URL" lines), which is
+      // taller than the rendered links — grow the block now so nothing is clipped.
+      autoResizeNode(node);
       descEl.focus();
 
       if (clickX != null && clickY != null) {
@@ -2677,9 +2977,7 @@
             n.notes = oldNotes;
             setNodeDesc(n.element, oldNotes);
             autoResizeNode(n);
-            if (state.selectedNodeIds.has(nodeId)) propNotes.value = oldNotes;
           });
-          if (state.selectedNodeIds.has(nodeId)) propNotes.value = newNotes;
         }
       }
 
@@ -2717,10 +3015,11 @@
       }
 
       // Left click on background (not on a node, port, handle, or connection)
-      if (e.button === 0 && !e.shiftKey &&
+      if (e.button === 0 &&
         !e.target.closest('.node') &&
         !e.target.closest('.port') &&
         !e.target.closest('.resize-handle') &&
+        !e.target.closest('.group-rect-label') &&
         !e.target.closest('.node-notes-editor') &&
         !e.target.closest('[contenteditable="true"]') &&
         !e.target.closest('path.connection, path.connection-hit')) {
@@ -2732,13 +3031,14 @@
           ae.blur();
         }
         e.preventDefault();
-        if (state.selectMode) {
-          clearSelection();
-          clearConnectSource();
-          startRubberBand(e);
-          return;
-        }
         clearConnectSource();
+        // Ctrl/Cmd + Shift + drag draws a group box.
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey) { startGroupDraw(e); return; }
+        // Ctrl/Cmd + drag draws a process block sized to the drag.
+        if (e.ctrlKey || e.metaKey) { startDrawNode(e); return; }
+        // Alt or Shift + drag → rubber-band select.
+        if (e.altKey || e.shiftKey) { startRubberBand(e); return; }
+        // Plain drag pans.
         state.panning.active = true;
         state.panning.lastX = e.clientX;
         state.panning.lastY = e.clientY;
@@ -2747,23 +3047,17 @@
       }
     }
 
-    function toggleSelectMode() {
-      state.selectMode = !state.selectMode;
-      const btn = document.getElementById('btn-select-mode');
-      if (btn) btn.classList.toggle('active', state.selectMode);
-      canvasContainer.classList.toggle('select-mode', state.selectMode);
-    }
-
     // ── Canvas mouse delegation ────────────────────────────────────────────────
 
     function onCanvasMouseDown(e) {
       // Don't interfere with inline editing
       if (e.target.closest('.node-notes-editor')) return;
       if (e.target.closest('[contenteditable="true"]')) return;
-      // Ignore when space is held — panning takes priority
-      if (spaceHeld || e.button !== 0) return;
+      if (e.button !== 0) return;
 
       // ── Connect Mode: a source node is waiting — next node click completes it ──
+      // Checked before the space-held guard so you can space-pan to an off-screen
+      // node and click it to connect even while still holding space.
       if (state.connectMode.fromNodeId !== null) {
         const nodeEl = e.target.closest('.node');
         if (nodeEl && !e.target.closest('.node-connect-btn') && !e.target.closest('.node-toggle-btn')) {
@@ -2778,13 +3072,18 @@
             createConnection(fromNodeId, fromPort, nodeId, toPort);
             clearConnectSource();
           }
+          return;
         }
-        // Ignore ports, handles, empty canvas while waiting for a target
+        // Not on a target node: let the event bubble so space+drag still pans
+        // (and a plain empty-canvas click cancels connect mode via the container).
         return;
       }
 
+      // Ignore when space is held — panning takes priority
+      if (spaceHeld) return;
+
       const handleEl = e.target.closest('.resize-handle');
-      if (handleEl) {
+      if (handleEl && handleEl.dataset.nodeId) {   // node handles only (group handles have no nodeId)
         e.preventDefault();
         e.stopPropagation();
         startResizing(e, handleEl.dataset.nodeId, handleEl.dataset.handle);
@@ -2804,7 +3103,7 @@
         e.preventDefault();
         const nodeId = nodeEl.dataset.nodeId;
 
-        if (e.shiftKey) {
+        if (e.shiftKey || e.altKey) {
           toggleNodeInSelection(nodeId);
         } else if (state.selectedNodeIds.has(nodeId)) {
           startDragging(e);
@@ -2816,11 +3115,21 @@
         return;
       }
 
-      if (e.shiftKey) {
+      // Ctrl/Cmd + Shift + drag → draw a dotted group box.
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        startGroupDraw(e);
+        return;
+      }
+      // Hold Shift or Alt and drag empty canvas to box-select.
+      if (e.shiftKey || e.altKey) {
+        e.preventDefault();
         e.stopPropagation();
         startRubberBand(e);
+        return;
       }
-      // non-shift empty canvas: bubble up to onContainerMouseDown which starts pan
+      // plain empty-canvas drag: bubble up to onContainerMouseDown which starts pan
     }
 
     // ── Drag (delta-based, supports multi) ────────────────────────────────────
@@ -2850,7 +3159,7 @@
       const wc = toWorldCoords(e.clientX, e.clientY);
       const base = getMinDims(node.type);
 
-      resizeUndoSnapshot = { nodeId, x: node.x, y: node.y, width: node.width, height: node.height };
+      resizeUndoSnapshot = { nodeId, x: node.x, y: node.y, width: node.width, height: node.height, manualHeight: node.manualHeight || null };
 
       state.resizing.active = true;
       state.resizing.nodeId = nodeId;
@@ -2866,19 +3175,110 @@
     }
 
     function applyResize(dx, dy) {
-      const { nodeId, handle, startX, startWidth, minW } = state.resizing;
+      const { nodeId, handle, startX, startWidth, minW, startY, startHeight, minH } = state.resizing;
       const node = state.nodes[nodeId];
       if (!node) return;
 
-      let x = startX, w = startWidth;
+      const resizingW = handle.includes('l') || handle.includes('r');
+      let w = startWidth;
       if (handle.includes('r')) w = Math.max(minW, startWidth + dx);
-      if (handle.includes('l')) { w = Math.max(minW, startWidth - dx); x = startX + startWidth - w; }
+      if (handle.includes('l')) w = Math.max(minW, startWidth - dx);
 
+      const resizingH = handle.includes('t') || handle.includes('b');
+      let h = startHeight;
+      if (handle.includes('b')) h = Math.max(minH, startHeight + dy);
+      if (handle.includes('t')) h = Math.max(minH, startHeight - dy);
+
+      // Snap to another block's width/height when close, so blocks line up to the
+      // same size. The user can keep dragging past the threshold to break the snap.
+      const snap = computeSizeSnap(nodeId, resizingW ? w : null, resizingH ? h : null);
+      if (resizingW && snap.w != null) w = Math.max(minW, snap.w);
+      if (resizingH && snap.h != null) h = Math.max(minH, snap.h);
+
+      let x = startX;
+      if (handle.includes('l')) x = startX + startWidth - w;
       node.x = x; node.width = w;
       node.element.style.left = x + 'px';
       node.element.style.width = w + 'px';
+
+      // Top/bottom handles set a manual height the user can grow or shrink.
+      if (resizingH) {
+        let y = startY;
+        if (handle.includes('t')) y = startY + startHeight - h;
+        node.manualHeight = h;
+        node.y = y;
+        node.element.style.top = y + 'px';
+      }
+
       autoResizeNode(node);
       updateConnectionsForNode(nodeId);
+      renderSizeGuides(node, snap);
+    }
+
+    // ── Resize size-snapping: match another block's width / height ───────────────
+
+    const SIZE_SNAP_THRESHOLD = 6;
+    let sizeGuideEls = [];
+
+    function computeSizeSnap(nodeId, w, h) {
+      const others = Object.values(state.nodes).filter(n => n.id !== nodeId);
+      let bestW = null, bestWAbs = SIZE_SNAP_THRESHOLD + 1, matchW = null;
+      let bestH = null, bestHAbs = SIZE_SNAP_THRESHOLD + 1, matchH = null;
+      for (const o of others) {
+        if (w != null) {
+          const d = Math.abs(o.width - w);
+          if (d <= SIZE_SNAP_THRESHOLD && d < bestWAbs) { bestWAbs = d; bestW = o.width; matchW = o; }
+        }
+        if (h != null) {
+          const d = Math.abs(o.height - h);
+          if (d <= SIZE_SNAP_THRESHOLD && d < bestHAbs) { bestHAbs = d; bestH = o.height; matchH = o; }
+        }
+      }
+      return { w: bestW, h: bestH, matchW, matchH };
+    }
+
+    function addSizeGuide(orient, a, b, c) {
+      // orient 'vert': line at x=a spanning y=b..c;  'horiz': line at y=a spanning x=b..c
+      const el = document.createElement('div');
+      el.className = 'align-guide ' + orient;
+      if (orient === 'vert') {
+        el.style.left = a + 'px';
+        el.style.top = b + 'px';
+        el.style.height = (c - b) + 'px';
+      } else {
+        el.style.top = a + 'px';
+        el.style.left = b + 'px';
+        el.style.width = (c - b) + 'px';
+      }
+      canvasNodes.appendChild(el);
+      sizeGuideEls.push(el);
+    }
+
+    // Draw the same thin guide lines used when moving: matched width → vertical
+    // lines along the left/right edges; matched height → horizontal lines along
+    // the top/bottom edges, each spanning across to the block it matched.
+    function renderSizeGuides(node, snap) {
+      clearSizeGuides();
+      const PAD = 20;
+      if (snap.matchW) {
+        const o = snap.matchW;
+        const y1 = Math.min(node.y, o.y) - PAD;
+        const y2 = Math.max(node.y + node.height, o.y + o.height) + PAD;
+        addSizeGuide('vert', node.x, y1, y2);
+        addSizeGuide('vert', node.x + node.width, y1, y2);
+      }
+      if (snap.matchH) {
+        const o = snap.matchH;
+        const x1 = Math.min(node.x, o.x) - PAD;
+        const x2 = Math.max(node.x + node.width, o.x + o.width) + PAD;
+        addSizeGuide('horiz', node.y, x1, x2);
+        addSizeGuide('horiz', node.y + node.height, x1, x2);
+      }
+    }
+
+    function clearSizeGuides() {
+      for (const el of sizeGuideEls) el.remove();
+      sizeGuideEls = [];
     }
 
     // ── Rubber-band ────────────────────────────────────────────────────────────
@@ -2903,27 +3303,370 @@
         node.y < ry + rh && node.y + node.height > ry;
     }
 
-    // ── Palette drag ───────────────────────────────────────────────────────────
+    // ── Ctrl+drag: draw a process block ──────────────────────────────────────────
 
-    function onPaletteMouseDown(e) {
-      if (e.button !== 0) return;
+    function startDrawNode(e) {
+      const wc = toWorldCoords(e.clientX, e.clientY);
+      const el = document.createElement('div');
+      el.className = 'draw-node-ghost';
+      el.style.left = wc.x + 'px'; el.style.top = wc.y + 'px';
+      el.style.width = '0'; el.style.height = '0';
+      el.textContent = getDefaultLabel('process');
+      canvasNodes.appendChild(el);
+
+      state.drawNode.active = true;
+      state.drawNode.startX = wc.x;
+      state.drawNode.startY = wc.y;
+      state.drawNode.element = el;
+      canvasContainer.classList.add('drawing-node');
+    }
+
+    function finalizeDrawNode(e) {
+      const wc = toWorldCoords(e.clientX, e.clientY);
+      const rx = Math.min(wc.x, state.drawNode.startX);
+      const ry = Math.min(wc.y, state.drawNode.startY);
+      const rw = Math.abs(wc.x - state.drawNode.startX);
+      const rh = Math.abs(wc.y - state.drawNode.startY);
+
+      if (state.drawNode.element) state.drawNode.element.remove();
+      state.drawNode.element = null;
+      state.drawNode.active = false;
+      canvasContainer.classList.remove('drawing-node');
+
+      const min = getMinDims('process');
+      // A near-click (no real drag) just drops a default-sized process block.
+      const isClick = rw < 12 && rh < 12;
+      const w = isClick ? NODE_DIMS.process.width : Math.max(min.w, rw);
+      const h = isClick ? NODE_DIMS.process.height : Math.max(min.h, rh);
+      const x = isClick ? rx - w / 2 : rx;
+      const y = isClick ? ry - h / 2 : ry;
+
+      clearSelection();
+      const node = createNode('process', x, y);
+      node.width = w; node.element.style.width = w + 'px';
+      // The drawn height becomes the manual height (a floor that still grows for content).
+      node.manualHeight = h;
+      autoResizeNode(node);
+      addToSelection(node.id);
+      updatePropsPanel();
+
+      const nodeId = node.id;
+      pushUndo(() => {
+        state.selectedNodeIds.delete(nodeId);
+        deleteNode(nodeId);
+        renumberNodes();
+        updatePropsPanel();
+      });
+    }
+
+    // ── Group boxes (Ctrl/Cmd+Shift+drag) ───────────────────────────────────────
+
+    function startGroupDraw(e) {
+      const wc = toWorldCoords(e.clientX, e.clientY);
+      const el = document.createElement('div');
+      el.className = 'group-rect-ghost';
+      el.style.left = wc.x + 'px'; el.style.top = wc.y + 'px';
+      el.style.width = '0'; el.style.height = '0';
+      canvasNodes.appendChild(el);
+      state.drawGroup.active = true;
+      state.drawGroup.startX = wc.x;
+      state.drawGroup.startY = wc.y;
+      state.drawGroup.element = el;
+      canvasContainer.classList.add('drawing-node');
+    }
+
+    function finalizeGroupDraw(e) {
+      const wc = toWorldCoords(e.clientX, e.clientY);
+      const rx = Math.min(wc.x, state.drawGroup.startX);
+      const ry = Math.min(wc.y, state.drawGroup.startY);
+      const rw = Math.abs(wc.x - state.drawGroup.startX);
+      const rh = Math.abs(wc.y - state.drawGroup.startY);
+      if (state.drawGroup.element) state.drawGroup.element.remove();
+      state.drawGroup.element = null;
+      state.drawGroup.active = false;
+      canvasContainer.classList.remove('drawing-node');
+
+      if (rw < 20 || rh < 20) return;   // ignore tiny boxes
+      const group = createGroup({ x: rx, y: ry, width: rw, height: rh, label: 'Group' });
+      selectGroup(group.id);
+      const id = group.id;
+      pushUndo(() => deleteGroup(id));
+    }
+
+    function createGroup(data) {
+      const id = data.id || ('group-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6));
+      const group = {
+        id, x: data.x, y: data.y, width: data.width, height: data.height,
+        label: data.label || 'Group', element: null, labelEl: null
+      };
+
+      const el = document.createElement('div');
+      el.className = 'group-rect';
+      el.dataset.groupId = id;
+      el.style.left = group.x + 'px';
+      el.style.top = group.y + 'px';
+      el.style.width = group.width + 'px';
+      el.style.height = group.height + 'px';
+
+      const labelEl = document.createElement('div');
+      labelEl.className = 'group-rect-label';
+      labelEl.textContent = group.label;
+      labelEl.title = 'Drag to move group · double-click to rename';
+      labelEl.addEventListener('mousedown', e => startGroupMove(e, id));
+      labelEl.addEventListener('dblclick', e => { e.preventDefault(); e.stopPropagation(); startGroupLabelEdit(id); });
+      el.appendChild(labelEl);
+
+      // Side/corner resize handles (shown when the group is selected).
+      ['tl', 'tc', 'tr', 'rc', 'br', 'bc', 'bl', 'lc'].forEach(h => {
+        const rh = document.createElement('div');
+        rh.className = 'resize-handle';
+        rh.dataset.handle = h;
+        rh.addEventListener('mousedown', e => startGroupBoxResize(e, id, h));
+        el.appendChild(rh);
+      });
+
+      // Behind the nodes so blocks sit on top.
+      canvasNodes.insertBefore(el, canvasNodes.firstChild);
+      group.element = el;
+      group.labelEl = labelEl;
+      state.groups[id] = group;
+      return group;
+    }
+
+    function deleteGroup(id) {
+      const group = state.groups[id];
+      if (!group) return;
+      group.element.remove();
+      delete state.groups[id];
+      state.selectedGroupIds.delete(id);
+    }
+
+    function addGroupToSelection(id) {
+      const group = state.groups[id];
+      if (!group) return;
+      state.selectedGroupIds.add(id);
+      group.element.classList.add('selected');
+    }
+
+    function selectGroup(id) {
+      clearSelection();
+      addGroupToSelection(id);
+    }
+
+    function clearGroupSelection() {
+      for (const gid of state.selectedGroupIds) {
+        const g = state.groups[gid];
+        if (g) g.element.classList.remove('selected');
+      }
+      state.selectedGroupIds.clear();
+    }
+
+    // Nodes whose centre lies inside the group rectangle.
+    function nodesInGroup(group) {
+      const out = [];
+      for (const n of Object.values(state.nodes)) {
+        const cx = n.x + n.width / 2, cy = n.y + n.height / 2;
+        if (cx >= group.x && cx <= group.x + group.width &&
+            cy >= group.y && cy <= group.y + group.height) out.push(n);
+      }
+      return out;
+    }
+
+    function startGroupMove(e, id) {
+      // Let Alt/Shift+drag fall through to rubber-band selection.
+      if (e.altKey || e.shiftKey) return;
       e.preventDefault();
+      e.stopPropagation();
+      const group = state.groups[id];
+      if (!group) return;
+      // Dragging a group that isn't part of the current selection selects just it;
+      // otherwise the whole selection (all selected groups) moves together.
+      if (!state.selectedGroupIds.has(id)) selectGroup(id);
 
-      const type = e.currentTarget.dataset.type;
-      const dims = NODE_DIMS[type] || NODE_DIMS.process;
+      const wc = toWorldCoords(e.clientX, e.clientY);
+      const groupIds = [...state.selectedGroupIds];
 
-      const ghost = document.createElement('div');
-      ghost.className = 'drag-ghost';
-      ghost.style.width = dims.width + 'px';
-      ghost.style.height = dims.height + 'px';
-      ghost.style.left = (e.clientX - dims.width / 2) + 'px';
-      ghost.style.top = (e.clientY - dims.height / 2) + 'px';
-      ghost.textContent = getDefaultLabel(type);
-      document.body.appendChild(ghost);
+      // Blocks to move = selected blocks + blocks inside any selected group.
+      const movedSet = new Set();
+      for (const nid of state.selectedNodeIds) {
+        const n = state.nodes[nid];
+        if (n && !n.locked) movedSet.add(nid);
+      }
+      for (const gid of groupIds) {
+        const g = state.groups[gid];
+        if (!g) continue;
+        for (const n of nodesInGroup(g)) if (!n.locked) movedSet.add(n.id);
+      }
 
-      state.pendingCreate.active = true;
-      state.pendingCreate.type = type;
-      state.pendingCreate.ghost = ghost;
+      // Connections with BOTH ends moving carry their bend points (waypoints) too.
+      const connSnaps = [];
+      for (const c of Object.values(state.connections)) {
+        if (c.waypoints && c.waypoints.length && movedSet.has(c.fromNodeId) && movedSet.has(c.toNodeId)) {
+          connSnaps.push({ id: c.id, waypoints: c.waypoints.map(p => ({ x: p.x, y: p.y })) });
+        }
+      }
+
+      state.groupDrag = {
+        active: true, lastX: wc.x, lastY: wc.y,
+        movedSet,
+        groupStart: groupIds.map(gid => { const g = state.groups[gid]; return { id: gid, x: g.x, y: g.y }; }),
+        nodeStart: [...movedSet].map(nid => { const n = state.nodes[nid]; return { id: nid, x: n.x, y: n.y }; }),
+        connSnaps
+      };
+    }
+
+    function applyGroupMove(wx, wy) {
+      const d = state.groupDrag;
+      const dx = wx - d.lastX, dy = wy - d.lastY;
+      d.lastX = wx; d.lastY = wy;
+      for (const gs of d.groupStart) {
+        const g = state.groups[gs.id];
+        if (!g) continue;
+        g.x += dx; g.y += dy;
+        g.element.style.left = g.x + 'px';
+        g.element.style.top = g.y + 'px';
+      }
+      // Move bend points of fully-internal connections by the same delta.
+      for (const c of Object.values(state.connections)) {
+        if (c.waypoints && c.waypoints.length &&
+            d.movedSet.has(c.fromNodeId) && d.movedSet.has(c.toNodeId)) {
+          for (const p of c.waypoints) { p.x += dx; p.y += dy; }
+        }
+      }
+      for (const s of d.nodeStart) {
+        const n = state.nodes[s.id];
+        if (!n) continue;
+        n.x += dx; n.y += dy;
+        n.element.style.left = n.x + 'px';
+        n.element.style.top = n.y + 'px';
+        updateConnectionsForNode(n.id);
+      }
+      // Keep the multi-select bounding box (if any) tracking the moved blocks.
+      if (state.groupBoxEl) {
+        const bb = getSelectionBBox();
+        if (bb) {
+          state.groupBoxEl.style.left = bb.x + 'px';
+          state.groupBoxEl.style.top = bb.y + 'px';
+        }
+      }
+    }
+
+    function finalizeGroupMove() {
+      const d = state.groupDrag;
+      state.groupDrag = { active: false };
+      let moved = false;
+      for (const gs of d.groupStart) {
+        const g = state.groups[gs.id];
+        if (g && (g.x !== gs.x || g.y !== gs.y)) { moved = true; break; }
+      }
+      if (!moved) return;
+      const gStart = d.groupStart, nStart = d.nodeStart, connSnaps = d.connSnaps;
+      pushUndo(() => {
+        for (const gs of gStart) {
+          const g = state.groups[gs.id];
+          if (g) { g.x = gs.x; g.y = gs.y; g.element.style.left = g.x + 'px'; g.element.style.top = g.y + 'px'; }
+        }
+        for (const cs of connSnaps) {
+          const c = state.connections[cs.id];
+          if (c) c.waypoints = cs.waypoints.map(p => ({ x: p.x, y: p.y }));
+        }
+        for (const s of nStart) {
+          const n = state.nodes[s.id];
+          if (!n) continue;
+          n.x = s.x; n.y = s.y;
+          n.element.style.left = n.x + 'px';
+          n.element.style.top = n.y + 'px';
+          updateConnectionsForNode(n.id);
+        }
+        updateGroupResizeBox();
+      });
+    }
+
+    function startGroupBoxResize(e, id, handle) {
+      // Let Alt/Shift+drag fall through to rubber-band selection.
+      if (e.altKey || e.shiftKey) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const group = state.groups[id];
+      if (!group) return;
+      // Clicking the border of an unselected group just selects it; you resize
+      // only once it's already selected.
+      if (!state.selectedGroupIds.has(id)) { selectGroup(id); return; }
+      const wc = toWorldCoords(e.clientX, e.clientY);
+      state.groupBoxResize = {
+        active: true, groupId: id, handle,
+        startMouseX: wc.x, startMouseY: wc.y,
+        startX: group.x, startY: group.y, startW: group.width, startH: group.height,
+        before: { x: group.x, y: group.y, width: group.width, height: group.height }
+      };
+    }
+
+    function applyGroupBoxResize(wx, wy) {
+      const r = state.groupBoxResize;
+      const group = state.groups[r.groupId];
+      if (!group) return;
+      const dx = wx - r.startMouseX, dy = wy - r.startMouseY;
+      const MIN = 40;
+      let x = r.startX, y = r.startY, w = r.startW, h = r.startH;
+      if (r.handle.includes('r')) w = Math.max(MIN, r.startW + dx);
+      if (r.handle.includes('l')) { w = Math.max(MIN, r.startW - dx); x = r.startX + r.startW - w; }
+      if (r.handle.includes('b')) h = Math.max(MIN, r.startH + dy);
+      if (r.handle.includes('t')) { h = Math.max(MIN, r.startH - dy); y = r.startY + r.startH - h; }
+      group.x = x; group.y = y; group.width = w; group.height = h;
+      const el = group.element;
+      el.style.left = x + 'px'; el.style.top = y + 'px';
+      el.style.width = w + 'px'; el.style.height = h + 'px';
+    }
+
+    function finalizeGroupBoxResize() {
+      const r = state.groupBoxResize;
+      state.groupBoxResize = { active: false };
+      const group = state.groups[r.groupId];
+      if (!group) return;
+      const b = r.before;
+      if (group.x === b.x && group.y === b.y && group.width === b.width && group.height === b.height) return;
+      const id = r.groupId;
+      pushUndo(() => {
+        const g = state.groups[id];
+        if (!g) return;
+        g.x = b.x; g.y = b.y; g.width = b.width; g.height = b.height;
+        g.element.style.left = b.x + 'px'; g.element.style.top = b.y + 'px';
+        g.element.style.width = b.width + 'px'; g.element.style.height = b.height + 'px';
+      });
+    }
+
+    function startGroupLabelEdit(id) {
+      const group = state.groups[id];
+      if (!group) return;
+      const labelEl = group.labelEl;
+      const old = group.label;
+      labelEl.contentEditable = 'true';
+      labelEl.focus();
+      const r = document.createRange();
+      r.selectNodeContents(labelEl);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+      let done = false;
+      function commit() {
+        if (done) return;
+        done = true;
+        labelEl.contentEditable = 'false';
+        const v = (labelEl.textContent || '').trim() || 'Group';
+        labelEl.textContent = v;
+        group.label = v;
+        if (v !== old) pushUndo(() => {
+          const g = state.groups[id];
+          if (!g) return;
+          g.label = old; g.labelEl.textContent = old;
+        });
+      }
+      labelEl.addEventListener('blur', commit, { once: true });
+      labelEl.addEventListener('keydown', ev => {
+        ev.stopPropagation();
+        if (ev.key === 'Enter') { ev.preventDefault(); labelEl.blur(); }
+        if (ev.key === 'Escape') { labelEl.textContent = old; labelEl.blur(); }
+      });
     }
 
     // ── Edge auto-pan (used during connect and node drag) ─────────────────────
@@ -3060,6 +3803,38 @@
         }
       }
 
+      if (state.drawNode.active && state.drawNode.element) {
+        const wc = toWorldCoords(e.clientX, e.clientY);
+        const rx = Math.min(wc.x, state.drawNode.startX);
+        const ry = Math.min(wc.y, state.drawNode.startY);
+        const rw = Math.abs(wc.x - state.drawNode.startX);
+        const rh = Math.abs(wc.y - state.drawNode.startY);
+        const el = state.drawNode.element;
+        el.style.left = rx + 'px'; el.style.top = ry + 'px';
+        el.style.width = rw + 'px'; el.style.height = rh + 'px';
+      }
+
+      if (state.drawGroup.active && state.drawGroup.element) {
+        const wc = toWorldCoords(e.clientX, e.clientY);
+        const rx = Math.min(wc.x, state.drawGroup.startX);
+        const ry = Math.min(wc.y, state.drawGroup.startY);
+        const rw = Math.abs(wc.x - state.drawGroup.startX);
+        const rh = Math.abs(wc.y - state.drawGroup.startY);
+        const el = state.drawGroup.element;
+        el.style.left = rx + 'px'; el.style.top = ry + 'px';
+        el.style.width = rw + 'px'; el.style.height = rh + 'px';
+      }
+
+      if (state.groupDrag.active) {
+        const wc = toWorldCoords(e.clientX, e.clientY);
+        applyGroupMove(wc.x, wc.y);
+      }
+
+      if (state.groupBoxResize.active) {
+        const wc = toWorldCoords(e.clientX, e.clientY);
+        applyGroupBoxResize(wc.x, wc.y);
+      }
+
       if (state.connecting.active && state.connecting.tempPath) {
         const wc = toWorldCoords(e.clientX, e.clientY);
         const from = getPortCenter(state.connecting.fromNodeId, state.connecting.fromPort);
@@ -3095,7 +3870,7 @@
         }
       }
 
-      if (state.connecting.active || state.dragging.active || state.reanchor.active || state.waypointEdit.active) {
+      if (state.connecting.active || state.dragging.active || state.reanchor.active || state.waypointEdit.active || state.drawNode.active || state.drawGroup.active || state.groupDrag.active || state.groupBoxResize.active) {
         const { dx, dy } = getEdgePanDeltas(e.clientX, e.clientY);
         if (dx || dy) triggerAutoPan(); else cancelAutoPan();
       }
@@ -3121,6 +3896,7 @@
       // End resize
       if (state.resizing.active) {
         state.resizing.active = false;
+        clearSizeGuides();
 
         if (resizeUndoSnapshot) {
           const snap = resizeUndoSnapshot;
@@ -3132,6 +3908,7 @@
               const n = state.nodes[snap.nodeId];
               if (!n) return;
               n.x = snap.x; n.y = snap.y; n.width = snap.width; n.height = snap.height;
+              n.manualHeight = snap.manualHeight;
               n.element.style.left = snap.x + 'px';
               n.element.style.top = snap.y + 'px';
               n.element.style.width = snap.width + 'px';
@@ -3194,7 +3971,7 @@
           const x = wc.x - dims.width / 2;
           const y = wc.y - dims.height / 2;
           clearSelection();
-          const node = createNode(state.pendingCreate.type, Math.max(0, x), Math.max(0, y));
+          const node = createNode(state.pendingCreate.type, x, y);
           addToSelection(node.id);
 
           const nodeId = node.id;
@@ -3240,6 +4017,30 @@
         }
       }
 
+      // Finalize Ctrl+drag draw → create the process block
+      if (state.drawNode.active) {
+        finalizeDrawNode(e);
+        return;
+      }
+
+      // Finalize Ctrl+Shift draw → create the group box
+      if (state.drawGroup.active) {
+        finalizeGroupDraw(e);
+        return;
+      }
+
+      // Finalize moving a group box
+      if (state.groupDrag.active) {
+        finalizeGroupMove();
+        return;
+      }
+
+      // Finalize resizing a group box
+      if (state.groupBoxResize.active) {
+        finalizeGroupBoxResize();
+        return;
+      }
+
       // Finalize rubber-band
       if (state.rubberBand.active) {
         const wc = toWorldCoords(e.clientX, e.clientY);
@@ -3251,6 +4052,10 @@
         for (const node of Object.values(state.nodes)) {
           node.element.classList.remove('rb-highlight');
           if (nodeIntersectsRect(node, rx, ry, rw, rh)) addToSelection(node.id);
+        }
+        // Groups intersecting the band get selected too.
+        for (const g of Object.values(state.groups)) {
+          if (nodeIntersectsRect(g, rx, ry, rw, rh)) addGroupToSelection(g.id);
         }
 
         state.rubberBand.element.remove();
@@ -3923,10 +4728,28 @@
       }
       const wps = conn.waypoints || [];
       for (let i = 0; i < connWaypointEls.length; i++) setHandlePos(connWaypointEls[i], wps[i]);
+      // Straight segments: the chord midpoint lies on the line. A bezier (no
+      // waypoints) curves away from its chord, so sample the real path instead
+      // so the add-bend handle sits ON the curve.
+      const curved = wps.length === 0;
       for (let i = 0; i < connAdderEls.length; i++) {
         const a = pts[i], b = pts[i + 1];
-        if (a && b) setHandlePos(connAdderEls[i], { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+        if (!a || !b) continue;
+        let mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        if (curved) mid = pathPointAtFraction(conn.pathElement, 0.5) || mid;
+        setHandlePos(connAdderEls[i], mid);
       }
+    }
+
+    // Point on a rendered path element at fraction t (0..1) of its length.
+    function pathPointAtFraction(pathEl, t) {
+      if (!pathEl) return null;
+      try {
+        const len = pathEl.getTotalLength();
+        if (!len) return null;
+        const p = pathEl.getPointAtLength(t * len);
+        return { x: p.x, y: p.y };
+      } catch (_) { return null; }
     }
 
     // ── Waypoints (bend points) ──────────────────────────────────────────────────
@@ -4101,6 +4924,7 @@
         state.selectedConnId = null;
       }
       hideConnEndpoints();
+      clearGroupSelection();
 
       updatePropsPanel();
       updateGroupResizeBox();
@@ -4224,244 +5048,12 @@
       }
     }
 
+    // Selection changed. The properties panel was removed (title/description are
+    // edited in-block, links via the "L - label - URL" / bare-URL syntax), so
+    // this only keeps the sole-selected highlight that drives the per-node
+    // connect button and port visibility.
     function updatePropsPanel() {
-      const count = state.selectedNodeIds.size;
-
-      if (count === 0) {
-        propsForm.classList.remove('visible');
-        propsEmpty.style.display = '';
-        propsEmpty.textContent = 'Select a component to edit its properties.';
-      } else if (count === 1) {
-        const nodeId = [...state.selectedNodeIds][0];
-        const node = state.nodes[nodeId];
-        if (!node) return;
-        propsEmpty.style.display = 'none';
-        propsForm.classList.add('visible');
-        propsNodeType.textContent = node.type.charAt(0).toUpperCase() + node.type.slice(1);
-        propSeq.value = node.seq || '';
-        propLabel.value = node.label;
-        propNotes.value = node.notes;
-        propTeam.value = node.responseTeam;
-        const propLocked = document.getElementById('prop-locked');
-        if (propLocked) propLocked.checked = !!node.locked;
-        const propColor = document.getElementById('prop-color');
-        if (propColor) propColor.value = node.customColor || '#ffffff';
-        const dbSection = document.getElementById('props-db-section');
-        if (node.type === 'database') {
-          dbSection.classList.add('visible');
-          propDbServer.value = node.dbServer || '';
-        } else {
-          dbSection.classList.remove('visible');
-        }
-        const apiSection = document.getElementById('props-api-section');
-        if (node.type === 'api') {
-          apiSection.classList.add('visible');
-          propApiUrl.value = node.apiUrl || '';
-          propApiRequest.value = node.apiRequest || '';
-          propApiResponse.value = node.apiResponse || '';
-        } else {
-          apiSection.classList.remove('visible');
-        }
-        renderLinkRows();
-      } else {
-        propsForm.classList.remove('visible');
-        propsEmpty.style.display = '';
-        propsEmpty.textContent = `${count} components selected. Drag to move all, or press Delete to remove.`;
-      }
-
       updateSoleSelected();
-    }
-
-    // ── Properties panel ───────────────────────────────────────────────────────
-
-    let propUndoSnapshot = null;
-
-    function onPropFocus() {
-      if (state.selectedNodeIds.size !== 1) return;
-      const nodeId = [...state.selectedNodeIds][0];
-      const node = state.nodes[nodeId];
-      if (!node) return;
-      propUndoSnapshot = {
-        nodeId,
-        seq: node.seq,
-        label: node.label,
-        notes: node.notes,
-        responseTeam: node.responseTeam,
-        links: JSON.parse(JSON.stringify(node.links || [])),
-        dbServer: node.dbServer || '',
-        apiUrl: node.apiUrl || '',
-        apiRequest: node.apiRequest || '',
-        apiResponse: node.apiResponse || '',
-      };
-    }
-
-    function onPropBlur() {
-      if (!propUndoSnapshot) return;
-      const snap = propUndoSnapshot;
-      propUndoSnapshot = null;
-      const node = state.nodes[snap.nodeId];
-      if (!node) return;
-
-      const changed = node.seq !== snap.seq ||
-        node.label !== snap.label ||
-        node.notes !== snap.notes ||
-        node.responseTeam !== snap.responseTeam ||
-        node.dbServer !== snap.dbServer ||
-        node.apiUrl !== snap.apiUrl ||
-        node.apiRequest !== snap.apiRequest ||
-        node.apiResponse !== snap.apiResponse ||
-        JSON.stringify(node.links) !== JSON.stringify(snap.links);
-      if (!changed) return;
-
-      const { seq, label, notes, responseTeam, links, dbServer, apiUrl, apiRequest, apiResponse, nodeId } = snap;
-      pushUndo(() => {
-        const n = state.nodes[nodeId];
-        if (!n) return;
-        n.seq = seq; n.label = label; n.notes = notes; n.responseTeam = responseTeam;
-        n.links = JSON.parse(JSON.stringify(links));
-        n.dbServer = dbServer;
-        n.apiUrl = apiUrl; n.apiRequest = apiRequest; n.apiResponse = apiResponse;
-        n.element.querySelector('.node-seq').textContent = seq || '';
-        setNodeLabelText(n.element, label);
-        setNodeDesc(n.element, notes);
-        renderNodeLinks(n.element, n.links);
-        if (n.type === 'database') setDbServer(n.element, n.dbServer);
-        if (n.type === 'api') { setApiUrl(n.element, n.apiUrl); setApiSections(n.element, n.apiRequest, n.apiResponse); }
-        autoResizeNode(n);
-        if (state.selectedNodeIds.has(nodeId)) { updatePropsPanel(); renderLinkRows(); }
-      });
-    }
-
-    function onPropsInput(field, value) {
-      if (state.selectedNodeIds.size !== 1) return;
-      const nodeId = [...state.selectedNodeIds][0];
-      const node = state.nodes[nodeId];
-      if (!node) return;
-      if (field === 'seq') {
-        const target = parseInt(value);
-        if (!(target > 0)) return;
-
-        const others = Object.values(state.nodes)
-          .filter(n => n.id !== node.id)
-          .sort((a, b) => (a.seq || 0) - (b.seq || 0));
-
-        const insertAt = Math.min(Math.max(target, 1), others.length + 1) - 1;
-        const ordered = others.slice();
-        ordered.splice(insertAt, 0, node);
-
-        ordered.forEach((n, i) => {
-          const newSeq = i + 1;
-          if (n.seq !== newSeq) {
-            n.seq = newSeq;
-            const seqEl = n.element.querySelector('.node-seq');
-            if (seqEl) seqEl.textContent = newSeq;
-          }
-        });
-        state.seqCounter = ordered.length;
-        return;
-      }
-      node[field] = value;
-      if (field === 'label') {
-        setNodeLabelText(node.element, value);
-      }
-      if (field === 'notes') {
-        setNodeDesc(node.element, value);
-      }
-      if (field === 'dbServer') {
-        setDbServer(node.element, value);
-      }
-      if (field === 'apiUrl') {
-        setApiUrl(node.element, value);
-      }
-      if (field === 'apiRequest' || field === 'apiResponse') {
-        setApiSections(node.element, node.apiRequest, node.apiResponse);
-      }
-      autoResizeNode(node);
-    }
-
-    // ── Links panel ────────────────────────────────────────────────────────────
-
-    function renderLinkRows() {
-      const list = document.getElementById('props-links-list');
-      if (!list) return;
-      list.innerHTML = '';
-      if (state.selectedNodeIds.size !== 1) return;
-      const node = state.nodes[[...state.selectedNodeIds][0]];
-      if (!node) return;
-
-      (node.links || []).forEach((link, i) => {
-        const row = document.createElement('div');
-        row.className = 'link-row';
-
-        const nameInput = document.createElement('input');
-        nameInput.type = 'text';
-        nameInput.className = 'link-name';
-        nameInput.placeholder = 'Label';
-        nameInput.value = link.name || '';
-        nameInput.addEventListener('focus', onPropFocus);
-        nameInput.addEventListener('blur', onPropBlur);
-        nameInput.addEventListener('input', () => {
-          node.links[i].name = nameInput.value;
-          renderNodeLinks(node.element, node.links);
-        });
-
-        const urlInput = document.createElement('input');
-        urlInput.type = 'text';
-        urlInput.placeholder = 'https://…';
-        urlInput.value = link.url || '';
-        urlInput.addEventListener('focus', onPropFocus);
-        urlInput.addEventListener('blur', onPropBlur);
-        urlInput.addEventListener('input', () => {
-          node.links[i].url = urlInput.value;
-          renderNodeLinks(node.element, node.links);
-          autoResizeNode(node);
-        });
-
-        const delBtn = document.createElement('button');
-        delBtn.className = 'link-del-btn';
-        delBtn.textContent = '×';
-        delBtn.title = 'Remove link';
-        delBtn.addEventListener('mousedown', e => e.preventDefault());
-        delBtn.addEventListener('click', () => {
-          const snapLinks = JSON.parse(JSON.stringify(node.links));
-          node.links.splice(i, 1);
-          renderNodeLinks(node.element, node.links);
-          autoResizeNode(node);
-          renderLinkRows();
-          pushUndo(() => {
-            node.links = JSON.parse(JSON.stringify(snapLinks));
-            renderNodeLinks(node.element, node.links);
-            autoResizeNode(node);
-            if (state.selectedNodeIds.has(node.id)) renderLinkRows();
-          });
-        });
-
-        row.appendChild(nameInput);
-        row.appendChild(urlInput);
-        row.appendChild(delBtn);
-        list.appendChild(row);
-      });
-    }
-
-    function onAddLink() {
-      if (state.selectedNodeIds.size !== 1) return;
-      const node = state.nodes[[...state.selectedNodeIds][0]];
-      if (!node) return;
-      const snapLinks = JSON.parse(JSON.stringify(node.links || []));
-      node.links = node.links || [];
-      node.links.push({ name: '', url: '' });
-      renderLinkRows();
-      const list = document.getElementById('props-links-list');
-      if (list && list.lastElementChild) {
-        const inputs = list.lastElementChild.querySelectorAll('input');
-        if (inputs[1]) inputs[1].focus();
-      }
-      pushUndo(() => {
-        node.links = JSON.parse(JSON.stringify(snapLinks));
-        renderNodeLinks(node.element, node.links);
-        autoResizeNode(node);
-        if (state.selectedNodeIds.has(node.id)) renderLinkRows();
-      });
     }
 
     // ── Delete ─────────────────────────────────────────────────────────────────
@@ -4525,11 +5117,6 @@
         if (seqEl) seqEl.textContent = newSeq;
       });
       state.seqCounter = nodes.length;
-      if (state.selectedNodeIds.size === 1 && propSeq) {
-        const id = [...state.selectedNodeIds][0];
-        const n = state.nodes[id];
-        if (n) propSeq.value = n.seq || '';
-      }
       return before;
     }
 
@@ -4544,11 +5131,6 @@
         if ((s.seq || 0) > max) max = s.seq || 0;
       }
       state.seqCounter = max;
-      if (state.selectedNodeIds.size === 1 && propSeq) {
-        const id = [...state.selectedNodeIds][0];
-        const n = state.nodes[id];
-        if (n) propSeq.value = n.seq || '';
-      }
     }
 
     function deleteConnection(connId) {
@@ -4588,6 +5170,9 @@
       const isInlineEdit = document.activeElement.contentEditable === 'true';
 
       if (tag === 'INPUT' || tag === 'TEXTAREA' || isInlineEdit) return;
+
+      // Holding Ctrl/Cmd arms "draw a process block" — show a crosshair affordance.
+      if (e.key === 'Control' || e.key === 'Meta') canvasContainer.classList.add('ctrl-draw');
 
       if (e.code === 'Space' && !spaceHeld) {
         e.preventDefault();
@@ -4634,8 +5219,21 @@
         pasteClipboard();
         return;
       }
-      if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (state.selectedGroupIds.size) {
+          const snaps = [...state.selectedGroupIds].map(gid => {
+            const g = state.groups[gid];
+            return g && { id: gid, x: g.x, y: g.y, width: g.width, height: g.height, label: g.label };
+          }).filter(Boolean);
+          snaps.forEach(s => deleteGroup(s.id));
+          if (snaps.length) pushUndo(() => snaps.forEach(createGroup));
+        }
+        deleteSelected();   // also remove any selected blocks
+      }
       if (e.key === 'Escape') {
+        const ov = document.getElementById('help-overlay');
+        if (ov && !ov.hidden) { openHelp(false); return; }
+        hideColorMenu();
         if (state.connectMode.fromNodeId) {
           clearConnectSource();
         } else {
@@ -4699,7 +5297,7 @@
       const newIds = [];
 
       for (const s of clipboard.nodes) {
-        const node = createNode(s.type, Math.max(0, s.x + offX), Math.max(0, s.y + offY));
+        const node = createNode(s.type, s.x + offX, s.y + offY);
         node.label = s.label;
         node.notes = s.notes;
         node.responseTeam = s.responseTeam;
@@ -4713,6 +5311,7 @@
         if (node.locked) node.element.classList.add('node--locked');
         node.customColor = s.customColor || null;
         if (node.customColor) applyNodeColor(node);
+        node.manualHeight = s.manualHeight || null;
         node.width = s.width;
         node.height = s.height;
 
@@ -4843,17 +5442,124 @@
       refreshConnectedHighlight();
     }
 
-    function toggleTheme() {
-      const dark = document.documentElement.classList.toggle('dark');
-      try { localStorage.setItem('flow:theme', dark ? 'dark' : 'light'); } catch { }
-      updateThemeButton();
+    // Full-screen the canvas only (no toolbar/sidebar/props) for a clean view.
+    function toggleFullscreen() {
+      const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+      if (!fsEl) {
+        const req = canvasContainer.requestFullscreen || canvasContainer.webkitRequestFullscreen;
+        if (req) req.call(canvasContainer);
+      } else {
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (exit) exit.call(document);
+      }
     }
-    function updateThemeButton() {
-      const btn = document.getElementById('btn-theme');
+    function updateFullscreenButton() {
+      const btn = document.getElementById('btn-fullscreen');
       if (!btn) return;
-      const dark = document.documentElement.classList.contains('dark');
-      btn.textContent = dark ? 'Light' : 'Dark';
-      btn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+      const fs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      const text = fs ? 'Exit Full Screen' : 'Full Screen';
+      const lbl = btn.querySelector('.tb-label');
+      if (lbl) lbl.textContent = text; else btn.textContent = text;
+      btn.title = fs ? 'Exit full screen (Esc)' : 'Full screen view (Esc to exit)';
+    }
+
+    // ── How-to guide ─────────────────────────────────────────────────────────────
+
+    function openHelp(show) {
+      const ov = document.getElementById('help-overlay');
+      if (ov) ov.hidden = !show;
+    }
+
+    // ── Toolbar icons (injected so they survive in the downloaded copy too) ───────
+
+    const TB_ICONS = {
+      'btn-undo': '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+      'btn-redo': '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"/>',
+      'btn-reset-view': '<circle cx="12" cy="12" r="9"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/>',
+      'btn-bring-front': '<polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/>',
+      'btn-send-back': '<polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/>',
+      'btn-delete': '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+      'btn-clear': '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+      'btn-export-png': '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
+      'btn-export-svg': '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
+      'btn-export': '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
+      'btn-import': '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+      'btn-fullscreen': '<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M16 21h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>',
+      'btn-download-app': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+      'btn-help': '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
+    };
+
+    function addToolbarIcons() {
+      for (const id in TB_ICONS) {
+        const btn = document.getElementById(id);
+        if (!btn) continue;
+        const label = btn.textContent.trim();
+        btn.innerHTML = '<svg class="tb-icon" viewBox="0 0 24 24" aria-hidden="true">' + TB_ICONS[id] + '</svg>' +
+          (label ? '<span class="tb-label">' + label + '</span>' : '');
+      }
+    }
+
+    // ── Toolbar dropdown menus ───────────────────────────────────────────────────
+
+    function closeToolbarMenus(except) {
+      document.querySelectorAll('.toolbar-menu.open').forEach(m => {
+        if (m !== except) m.classList.remove('open');
+      });
+    }
+
+    function setupToolbarMenus() {
+      document.querySelectorAll('.toolbar-menu').forEach(menu => {
+        const trigger = menu.querySelector('.toolbar-menu-trigger');
+        if (trigger) {
+          trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const willOpen = !menu.classList.contains('open');
+            closeToolbarMenus(menu);
+            menu.classList.toggle('open', willOpen);
+          });
+        }
+        // Clicking any item in the dropdown closes the menu; the item's own
+        // click handler still fires normally.
+        const dropdown = menu.querySelector('.toolbar-dropdown');
+        if (dropdown) {
+          dropdown.addEventListener('click', (e) => {
+            if (e.target.closest('.toolbar-btn')) closeToolbarMenus();
+          });
+        }
+      });
+      document.addEventListener('mousedown', (e) => {
+        if (!e.target.closest('.toolbar-menu')) closeToolbarMenus();
+      }, true);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeToolbarMenus();
+      });
+    }
+
+    // ── Download this app as a standalone HTML file (without the download button) ─
+
+    function downloadApp() {
+      const clone = document.documentElement.cloneNode(true);
+      const dl = clone.querySelector('#btn-download-app');
+      if (dl) dl.remove();
+      // Ship a blank canvas — a live diagram lives only in JS state / Save Diagram.
+      const nodesLayer = clone.querySelector('#canvas-nodes');
+      if (nodesLayer) nodesLayer.innerHTML = '';
+      clone.querySelectorAll('#canvas-svg path').forEach(p => p.remove());
+      const world = clone.querySelector('#canvas-world');
+      if (world) world.style.transform = '';
+      const help = clone.querySelector('#help-overlay');
+      if (help) help.setAttribute('hidden', '');
+      const zoomEl = clone.querySelector('#zoom-display');
+      if (zoomEl) zoomEl.textContent = '100%';
+
+      const html = '<!DOCTYPE html>\n' + clone.outerHTML;
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'canvas.html';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
     function applyNodeColor(node) {
@@ -4866,6 +5572,91 @@
         el.style.removeProperty('--node-bg');
         el.classList.remove('node--custom-color');
       }
+    }
+
+    // ── Right-click colour menu ──────────────────────────────────────────────────
+
+    const NODE_COLORS = ['#ffffff', '#fde68a', '#bbf7d0', '#bfdbfe', '#ddd6fe',
+                         '#fbcfe8', '#fed7aa', '#fecaca', '#cffafe', '#e5e7eb'];
+    let colorMenuEl = null;
+
+    function setNodeColor(nodeId, color) {
+      const node = state.nodes[nodeId];
+      if (!node) return;
+      const prev = node.customColor || null;
+      if (prev === color) return;
+      node.customColor = color;
+      applyNodeColor(node);
+      pushUndo(() => {
+        const n = state.nodes[nodeId];
+        if (!n) return;
+        n.customColor = prev;
+        applyNodeColor(n);
+      });
+    }
+
+    function hideColorMenu() {
+      if (colorMenuEl) { colorMenuEl.remove(); colorMenuEl = null; }
+      document.removeEventListener('mousedown', onDocMouseDownForMenu, true);
+    }
+
+    function onDocMouseDownForMenu(e) {
+      if (colorMenuEl && !colorMenuEl.contains(e.target)) hideColorMenu();
+    }
+
+    function onContextMenu(e) {
+      const nodeEl = e.target.closest('.node');
+      e.preventDefault();          // suppress the native menu either way
+      if (!nodeEl) { hideColorMenu(); return; }
+      showColorMenu(nodeEl.dataset.nodeId, e.clientX, e.clientY);
+    }
+
+    function showColorMenu(nodeId, cx, cy) {
+      hideColorMenu();
+      const node = state.nodes[nodeId];
+      if (!node) return;
+
+      const menu = document.createElement('div');
+      menu.className = 'ctx-menu';
+
+      const grid = document.createElement('div');
+      grid.className = 'ctx-swatches';
+      NODE_COLORS.forEach(c => {
+        const sw = document.createElement('button');
+        sw.type = 'button';
+        sw.className = 'ctx-swatch';
+        sw.style.background = c;
+        sw.title = c;
+        if ((node.customColor || '').toLowerCase() === c.toLowerCase()) sw.classList.add('active');
+        sw.addEventListener('click', () => { setNodeColor(nodeId, c); hideColorMenu(); });
+        grid.appendChild(sw);
+      });
+      menu.appendChild(grid);
+
+      const row = document.createElement('div');
+      row.className = 'ctx-row';
+      const custom = document.createElement('input');
+      custom.type = 'color';
+      custom.value = node.customColor || '#ffffff';
+      custom.title = 'Custom colour';
+      custom.addEventListener('input', () => setNodeColor(nodeId, custom.value));
+      const def = document.createElement('button');
+      def.type = 'button';
+      def.className = 'ctx-default';
+      def.textContent = 'Default';
+      def.addEventListener('click', () => { setNodeColor(nodeId, null); hideColorMenu(); });
+      row.appendChild(custom);
+      row.appendChild(def);
+      menu.appendChild(row);
+
+      document.body.appendChild(menu);
+      // Clamp to the viewport.
+      const r = menu.getBoundingClientRect();
+      menu.style.left = Math.min(cx, window.innerWidth - r.width - 8) + 'px';
+      menu.style.top = Math.min(cy, window.innerHeight - r.height - 8) + 'px';
+
+      colorMenuEl = menu;
+      document.addEventListener('mousedown', onDocMouseDownForMenu, true);
     }
 
     const ALIGN_THRESHOLD = 5;
@@ -5033,8 +5824,8 @@
       }
       const dims = NODE_DIMS[type] || NODE_DIMS.process;
       const wc = toWorldCoords(cx, cy);
-      const x = Math.max(0, wc.x - dims.width / 2);
-      const y = Math.max(0, wc.y - dims.height / 2);
+      const x = wc.x - dims.width / 2;
+      const y = wc.y - dims.height / 2;
 
       clearSelection();
       const node = createNode(type, x, y);
@@ -5055,6 +5846,7 @@
         canvasContainer.classList.remove('space-held');
         if (!state.panning.active) canvasContainer.classList.remove('panning');
       }
+      if (e.key === 'Control' || e.key === 'Meta') canvasContainer.classList.remove('ctrl-draw');
     }
 
     // ── Clear all ──────────────────────────────────────────────────────────────
@@ -5064,14 +5856,19 @@
 
       const nodeSnaps = Object.keys(state.nodes).map(snapshotNode);
       const connSnaps = Object.values(state.connections).map(snapshotConnection);
+      const groupSnaps = Object.values(state.groups).map(g => ({
+        id: g.id, x: g.x, y: g.y, width: g.width, height: g.height, label: g.label
+      }));
 
       for (const id of Object.keys(state.connections)) deleteConnection(id);
       for (const id of Object.keys(state.nodes)) deleteNode(id);
+      for (const id of Object.keys(state.groups)) deleteGroup(id);
       clearSelection();
 
       pushUndo(() => {
         nodeSnaps.forEach(restoreNode);
         connSnaps.forEach(restoreConnection);
+        groupSnaps.forEach(createGroup);
       });
     }
 
@@ -5079,6 +5876,7 @@
 
     function serializeState() {
       return {
+        name: diagramBaseName(),
         nodes: Object.values(state.nodes).map(n => ({
           id: n.id, type: n.type, seq: n.seq,
           label: n.label, notes: n.notes, responseTeam: n.responseTeam,
@@ -5088,6 +5886,7 @@
           collapsed: n.collapsed || false,
           locked: n.locked || false,
           customColor: n.customColor || null,
+          manualHeight: n.manualHeight || null,
           x: n.x, y: n.y, width: n.width, height: n.height
         })),
         connections: Object.values(state.connections).map(c => ({
@@ -5095,15 +5894,23 @@
           toNodeId: c.toNodeId, toPort: c.toPort, label: c.label || '',
           fromAnchored: !!c.fromAnchored, toAnchored: !!c.toAnchored,
           waypoints: (c.waypoints || []).map(p => ({ x: p.x, y: p.y }))
+        })),
+        groups: Object.values(state.groups).map(g => ({
+          id: g.id, x: g.x, y: g.y, width: g.width, height: g.height, label: g.label
         }))
       };
     }
 
+    // Base file name from the top-left field (used for every save/export).
+    function diagramBaseName() {
+      const el = document.getElementById('diagram-name');
+      const v = (el && el.value.trim()) || 'flow-diagram';
+      return v.replace(/\.(png|svg|json)$/i, '') || 'flow-diagram';
+    }
+
     function exportDiagram() {
       const data = serializeState();
-      const input = window.prompt('Save as:', 'flow-diagram');
-      if (input === null) return;
-      const filename = (input.trim() || 'flow-diagram').replace(/\.json$/i, '') + '.json';
+      const filename = diagramBaseName() + '.json';
 
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -5170,7 +5977,13 @@
     function loadDiagram(data) {
       for (const id of Object.keys(state.connections)) deleteConnection(id);
       for (const id of Object.keys(state.nodes)) deleteNode(id);
+      for (const id of Object.keys(state.groups)) deleteGroup(id);
       clearSelection();
+
+      const nameEl = document.getElementById('diagram-name');
+      if (nameEl && data.name) nameEl.value = data.name;
+
+      (data.groups || []).forEach(g => createGroup(g));
 
       (data.nodes || []).forEach(n => {
         const node = createNode(n.type, n.x, n.y);
@@ -5196,6 +6009,7 @@
         } else {
           node.links = [];
         }
+        node.manualHeight = n.manualHeight || null;
         if (n.width) { node.width = n.width; node.element.style.width = n.width + 'px'; }
         if (n.height) { node.height = n.height; node.element.style.height = n.height + 'px'; }
         node.element.querySelector('.node-seq').textContent = node.seq || '';
@@ -5259,6 +6073,10 @@
         minX = Math.min(minX, bb.x); minY = Math.min(minY, bb.y);
         maxX = Math.max(maxX, bb.x + bb.width); maxY = Math.max(maxY, bb.y + bb.height);
       }
+      for (const g of Object.values(state.groups)) {
+        minX = Math.min(minX, g.x); minY = Math.min(minY, g.y);
+        maxX = Math.max(maxX, g.x + g.width); maxY = Math.max(maxY, g.y + g.height);
+      }
       minX -= PAD; minY -= PAD; maxX += PAD; maxY += PAD;
       const W = maxX - minX, H = maxY - minY;
 
@@ -5285,6 +6103,30 @@
       bg.setAttribute('width', W); bg.setAttribute('height', H);
       bg.setAttribute('fill', '#f9fafb');
       svg.appendChild(bg);
+
+      // Group boxes (behind everything else).
+      for (const g of Object.values(state.groups)) {
+        const rect = document.createElementNS(SVGNS, 'rect');
+        rect.setAttribute('x', g.x); rect.setAttribute('y', g.y);
+        rect.setAttribute('width', g.width); rect.setAttribute('height', g.height);
+        rect.setAttribute('rx', 6);
+        rect.setAttribute('fill', 'none');
+        rect.setAttribute('stroke', '#9ca3af');
+        rect.setAttribute('stroke-width', '1.5');
+        rect.setAttribute('stroke-dasharray', '2 3');
+        svg.appendChild(rect);
+        if (g.label) {
+          const t = document.createElementNS(SVGNS, 'text');
+          t.setAttribute('x', g.x + 10);
+          t.setAttribute('y', g.y - 2);
+          t.setAttribute('font-family', 'ui-sans-serif, system-ui, sans-serif');
+          t.setAttribute('font-size', '11');
+          t.setAttribute('font-weight', '600');
+          t.setAttribute('fill', '#6366f1');
+          t.textContent = g.label;
+          svg.appendChild(t);
+        }
+      }
 
       // Connection layer (native vector paths, world coords) + arrowhead defs.
       const defs = canvasSvg.querySelector('defs');
@@ -5331,9 +6173,7 @@
       svg.appendChild(fo);
 
       const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(svg);
-      const input = window.prompt('Save as:', 'flow-diagram');
-      if (input === null) return;
-      const filename = (input.trim() || 'flow-diagram').replace(/\.svg$/i, '') + '.svg';
+      const filename = diagramBaseName() + '.svg';
       const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -5357,6 +6197,12 @@
         minY = Math.min(minY, n.y);
         maxX = Math.max(maxX, n.x + n.width);
         maxY = Math.max(maxY, n.y + n.height);
+      }
+      for (const g of Object.values(state.groups)) {
+        minX = Math.min(minX, g.x);
+        minY = Math.min(minY, g.y);
+        maxX = Math.max(maxX, g.x + g.width);
+        maxY = Math.max(maxY, g.y + g.height);
       }
 
       const W = maxX - minX + PAD * 2;
@@ -5382,6 +6228,10 @@
         }
       }
 
+      for (const g of Object.values(state.groups)) {
+        pngDrawGroup(ctx, g, ox, oy);
+      }
+
       for (const conn of Object.values(state.connections)) {
         pngDrawConnection(ctx, conn, ox, oy);
       }
@@ -5390,13 +6240,33 @@
         pngDrawNode(ctx, node, ox, oy);
       }
 
-      const input = window.prompt('Save as:', 'flow-diagram');
-      if (input === null) return;
-      const filename = (input.trim() || 'flow-diagram').replace(/\.png$/i, '') + '.png';
+      const filename = diagramBaseName() + '.png';
       const link = document.createElement('a');
       link.download = filename;
       link.href = canvas.toDataURL('image/png');
       link.click();
+    }
+
+    function pngDrawGroup(ctx, g, ox, oy) {
+      const x = g.x - ox, y = g.y - oy;
+      ctx.save();
+      ctx.strokeStyle = '#9ca3af';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([2, 3]);
+      ctx.strokeRect(x, y, g.width, g.height);
+      ctx.restore();
+      if (g.label) {
+        ctx.save();
+        ctx.font = '600 11px ui-sans-serif, system-ui, sans-serif';
+        const tw = ctx.measureText(g.label).width;
+        const lx = x + 10, ly = y;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(lx - 4, ly - 9, tw + 8, 15);
+        ctx.fillStyle = '#6366f1';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(g.label, lx, ly - 1);
+        ctx.restore();
+      }
     }
 
     function pngDrawConnection(ctx, conn, ox, oy) {
