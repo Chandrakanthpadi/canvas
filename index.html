@@ -5,7 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Canvas</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%236366f1'/%3E%3Crect%20x='6'%20y='7'%20width='9'%20height='7'%20rx='2'%20fill='%23ffffff'/%3E%3Crect%20x='17'%20y='18'%20width='9'%20height='7'%20rx='2'%20fill='%23ffffff'/%3E%3Cpath%20d='M10.5%2014V17a1%201%200%200%200%201%201h6'%20fill='none'%20stroke='%23ffffff'%20stroke-width='2.2'%20stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%236366f1'/%3E%3Crect%20x='6'%20y='7'%20width='9'%20height='7'%20rx='2'%20fill='%23ffffff'/%3E%3Crect%20x='17'%20y='18'%20width='9'%20height='7'%20rx='2'%20fill='%23ffffff'/%3E%3Cpath%20d='M10.5%2014V17a1%201%200%200%200%201%201h6'%20fill='none'%20stroke='%23ffffff'%20stroke-width='2.2'%20stroke-linecap='round'/%3E%3C/svg%3E">
   <!-- <link rel="stylesheet" href="style.css"> -->
   <style>
     :root {
@@ -83,7 +84,11 @@
       padding: 4px 8px;
       width: 160px;
     }
-    .diagram-name:focus { outline: none; border-color: var(--accent); }
+
+    .diagram-name:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
 
     .toolbar-sep {
       width: 1px;
@@ -116,7 +121,12 @@
       background: var(--border);
     }
 
-    .toolbar-btn { flex-shrink: 0; display: inline-flex; align-items: center; }
+    .toolbar-btn {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+    }
+
     .tb-icon {
       width: 14px;
       height: 14px;
@@ -128,19 +138,39 @@
       stroke-linecap: round;
       stroke-linejoin: round;
     }
-    .toolbar-spacer { flex: 1 1 auto; min-width: 6px; }
+
+    .toolbar-spacer {
+      flex: 1 1 auto;
+      min-width: 6px;
+    }
 
     /* ── Toolbar dropdown menus ── */
-    .toolbar-menu { position: relative; display: inline-flex; flex-shrink: 0; }
-    .toolbar-menu-trigger { gap: 4px; }
+    .toolbar-menu {
+      position: relative;
+      display: inline-flex;
+      flex-shrink: 0;
+    }
+
+    .toolbar-menu-trigger {
+      gap: 4px;
+    }
+
     .tb-caret {
       font-size: 9px;
       line-height: 1;
       color: var(--text-3);
       transition: transform 0.12s;
     }
-    .toolbar-menu.open > .toolbar-menu-trigger { background: var(--bg); color: var(--text-1); }
-    .toolbar-menu.open .tb-caret { transform: rotate(180deg); }
+
+    .toolbar-menu.open>.toolbar-menu-trigger {
+      background: var(--bg);
+      color: var(--text-1);
+    }
+
+    .toolbar-menu.open .tb-caret {
+      transform: rotate(180deg);
+    }
+
     .toolbar-dropdown {
       position: absolute;
       top: calc(100% + 4px);
@@ -156,7 +186,11 @@
       box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
       z-index: 1000;
     }
-    .toolbar-menu.open .toolbar-dropdown { display: flex; }
+
+    .toolbar-menu.open .toolbar-dropdown {
+      display: flex;
+    }
+
     .toolbar-dropdown .toolbar-btn {
       width: 100%;
       justify-content: flex-start;
@@ -173,7 +207,11 @@
       justify-content: center;
       z-index: 2000;
     }
-    #help-overlay[hidden] { display: none; }
+
+    #help-overlay[hidden] {
+      display: none;
+    }
+
     #help-modal {
       position: relative;
       background: var(--surface);
@@ -187,7 +225,12 @@
       font-size: 13px;
       line-height: 1.55;
     }
-    #help-modal h2 { font-size: 18px; margin-bottom: 12px; }
+
+    #help-modal h2 {
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+
     #help-modal h3 {
       font-size: 13px;
       text-transform: uppercase;
@@ -195,8 +238,16 @@
       color: var(--accent);
       margin: 18px 0 6px;
     }
-    #help-modal ul { margin: 0 0 4px; padding-left: 20px; }
-    #help-modal li { margin: 3px 0; }
+
+    #help-modal ul {
+      margin: 0 0 4px;
+      padding-left: 20px;
+    }
+
+    #help-modal li {
+      margin: 3px 0;
+    }
+
     #help-modal code {
       background: var(--bg);
       border: 1px solid var(--border);
@@ -204,6 +255,7 @@
       padding: 0 4px;
       font-size: 12px;
     }
+
     #help-close {
       position: absolute;
       top: 12px;
@@ -218,7 +270,11 @@
       cursor: pointer;
       border-radius: 6px;
     }
-    #help-close:hover { background: var(--bg); color: var(--text-1); }
+
+    #help-close:hover {
+      background: var(--bg);
+      color: var(--text-1);
+    }
 
     #zoom-display {
       font-size: 12px;
@@ -401,7 +457,7 @@
       position: relative;
       overflow: hidden;
       background-color: var(--canvas-bg);
-      background-image: radial-gradient(circle, var(--canvas-dot) 1px, transparent 1px);
+      /* background-image: radial-gradient(circle, var(--canvas-dot) 1px, transparent 1px); */
       background-size: 22px 22px;
       cursor: grab;
     }
@@ -668,7 +724,11 @@
       box-shadow: 0 1px 3px rgba(99, 102, 241, 0.4);
       font-variant-numeric: tabular-nums;
     }
-    .node-seq:hover { box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35), 0 1px 3px rgba(99, 102, 241, 0.4); }
+
+    .node-seq:hover {
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35), 0 1px 3px rgba(99, 102, 241, 0.4);
+    }
+
     .node-seq--editing {
       width: auto;
       min-width: 18px;
@@ -714,6 +774,45 @@
     .node--process {
       background: #dbeafe;
       border-color: #93c5fd;
+    }
+
+    .node--text {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    .node--text.selected,
+    .node--text:focus-within {
+      box-shadow: 0 0 0 2px var(--accent), 0 1px 4px rgba(15, 23, 42, 0.08) !important;
+      border-radius: var(--radius-sm) !important;
+    }
+
+    .node--text .node-label,
+    .node--text .node-label-text {
+      display: block !important;
+      white-space: pre-wrap !important;
+      word-break: break-word !important;
+      text-align: center !important;
+      width: 100% !important;
+    }
+
+    .node--text.node--custom-color {
+      background: var(--node-bg) !important;
+      border: 1px solid var(--node-bg) !important;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+    }
+
+    .node--text.node--custom-color.selected {
+      box-shadow: 0 0 0 2px var(--accent), 0 1px 4px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    .node--text .node-seq {
+      display: none;
+    }
+
+    .node--text .node-desc.is-empty {
+      display: none;
     }
 
     .node--decision {
@@ -1008,7 +1107,7 @@
     }
 
     .node-desc.is-empty::before {
-      content: 'Double-click to add note…';
+      content: 'Add Desciption..';
       color: var(--text-3);
       font-style: italic;
     }
@@ -1219,6 +1318,7 @@
       opacity: 0.5;
       pointer-events: all;
     }
+
     #canvas-container.connecting-active .port:hover {
       opacity: 1;
       background: var(--accent);
@@ -1237,15 +1337,25 @@
       cursor: grab;
       z-index: 11;
     }
-    .conn-endpoint:hover { background: var(--accent); }
-    .conn-endpoint.dragging { cursor: grabbing; pointer-events: none; }
+
+    .conn-endpoint:hover {
+      background: var(--accent);
+    }
+
+    .conn-endpoint.dragging {
+      cursor: grabbing;
+      pointer-events: none;
+    }
 
     /* Solid bend points on a selected straight connection. */
     .conn-waypoint {
       background: var(--accent);
       cursor: grab;
     }
-    .conn-waypoint:hover { background: var(--accent-h, var(--accent)); }
+
+    .conn-waypoint:hover {
+      background: var(--accent-h, var(--accent));
+    }
 
     /* Hollow "add a bend" handles at segment midpoints. */
     .conn-adder {
@@ -1261,7 +1371,10 @@
       cursor: copy;
       z-index: 11;
     }
-    .conn-adder:hover { opacity: 1; }
+
+    .conn-adder:hover {
+      opacity: 1;
+    }
 
     /* ── Per-node connect button ── */
     .node-connect-btn {
@@ -1378,7 +1491,9 @@
 
     /* A group's border strips are always clickable so clicking the dotted line
        selects the group (they stay invisible until the group is selected). */
-    .group-rect .resize-handle { pointer-events: all; }
+    .group-rect .resize-handle {
+      pointer-events: all;
+    }
 
     /* Group-resize box keeps the small left/right dot handles. */
     .resize-handle[data-handle="rc"] {
@@ -1395,7 +1510,9 @@
 
     /* On a selected node or group box, the whole border is grabbable: each side
        is a full-length resize strip, with visible corner handles for both axes. */
-    :is(.node, .group-rect) .resize-handle { transform: none; }
+    :is(.node, .group-rect) .resize-handle {
+      transform: none;
+    }
 
     :is(.node, .group-rect) .resize-handle[data-handle="tc"],
     :is(.node, .group-rect) .resize-handle[data-handle="bc"],
@@ -1406,14 +1523,40 @@
       border-radius: 0;
       z-index: 12;
     }
+
     :is(.node, .group-rect) .resize-handle[data-handle="tc"],
-    :is(.node, .group-rect) .resize-handle[data-handle="bc"] { left: 0; width: 100%; height: 10px; cursor: ns-resize; }
-    :is(.node, .group-rect) .resize-handle[data-handle="tc"] { top: -5px; }
-    :is(.node, .group-rect) .resize-handle[data-handle="bc"] { top: auto; bottom: -5px; }
+    :is(.node, .group-rect) .resize-handle[data-handle="bc"] {
+      left: 0;
+      width: 100%;
+      height: 10px;
+      cursor: ns-resize;
+    }
+
+    :is(.node, .group-rect) .resize-handle[data-handle="tc"] {
+      top: -5px;
+    }
+
+    :is(.node, .group-rect) .resize-handle[data-handle="bc"] {
+      top: auto;
+      bottom: -5px;
+    }
+
     :is(.node, .group-rect) .resize-handle[data-handle="lc"],
-    :is(.node, .group-rect) .resize-handle[data-handle="rc"] { top: 0; height: 100%; width: 10px; cursor: ew-resize; }
-    :is(.node, .group-rect) .resize-handle[data-handle="lc"] { left: -5px; }
-    :is(.node, .group-rect) .resize-handle[data-handle="rc"] { left: auto; right: -5px; }
+    :is(.node, .group-rect) .resize-handle[data-handle="rc"] {
+      top: 0;
+      height: 100%;
+      width: 10px;
+      cursor: ew-resize;
+    }
+
+    :is(.node, .group-rect) .resize-handle[data-handle="lc"] {
+      left: -5px;
+    }
+
+    :is(.node, .group-rect) .resize-handle[data-handle="rc"] {
+      left: auto;
+      right: -5px;
+    }
 
     :is(.node, .group-rect) .resize-handle[data-handle="tl"],
     :is(.node, .group-rect) .resize-handle[data-handle="tr"],
@@ -1423,10 +1566,34 @@
       height: 11px;
       z-index: 19;
     }
-    :is(.node, .group-rect) .resize-handle[data-handle="tl"] { top: -5px; left: -5px; cursor: nwse-resize; }
-    :is(.node, .group-rect) .resize-handle[data-handle="tr"] { top: -5px; left: auto; right: -5px; cursor: nesw-resize; }
-    :is(.node, .group-rect) .resize-handle[data-handle="bl"] { top: auto; bottom: -5px; left: -5px; cursor: nesw-resize; }
-    :is(.node, .group-rect) .resize-handle[data-handle="br"] { top: auto; bottom: -5px; left: auto; right: -5px; cursor: nwse-resize; }
+
+    :is(.node, .group-rect) .resize-handle[data-handle="tl"] {
+      top: -5px;
+      left: -5px;
+      cursor: nwse-resize;
+    }
+
+    :is(.node, .group-rect) .resize-handle[data-handle="tr"] {
+      top: -5px;
+      left: auto;
+      right: -5px;
+      cursor: nesw-resize;
+    }
+
+    :is(.node, .group-rect) .resize-handle[data-handle="bl"] {
+      top: auto;
+      bottom: -5px;
+      left: -5px;
+      cursor: nesw-resize;
+    }
+
+    :is(.node, .group-rect) .resize-handle[data-handle="br"] {
+      top: auto;
+      bottom: -5px;
+      left: auto;
+      right: -5px;
+      cursor: nwse-resize;
+    }
 
     /* ── Group resize box ── */
     .group-resize-box {
@@ -1611,8 +1778,11 @@
       color: var(--text-2);
       opacity: 0.85;
     }
+
     #canvas-container.drawing-node,
-    #canvas-container.ctrl-draw { cursor: crosshair; }
+    #canvas-container.ctrl-draw {
+      cursor: crosshair;
+    }
 
     /* ── Group boxes (Ctrl+Shift+drag) ── */
     .group-rect-ghost {
@@ -1623,17 +1793,21 @@
       pointer-events: none;
       z-index: 5;
     }
+
     .group-rect {
       position: absolute;
       border: 2px dotted var(--border-md);
       background: transparent;
       border-radius: 6px;
       box-sizing: border-box;
-      pointer-events: none;   /* clicks pass through to the blocks inside */
+      pointer-events: none;
+      /* clicks pass through to the blocks inside */
     }
+
     .group-rect.selected {
       border-color: var(--accent);
     }
+
     .group-rect-label {
       position: absolute;
       top: -11px;
@@ -1646,13 +1820,15 @@
       border-radius: 4px;
       padding: 1px 8px;
       cursor: move;
-      pointer-events: all;    /* the grab / select / rename handle */
+      pointer-events: all;
+      /* the grab / select / rename handle */
       user-select: none;
       white-space: nowrap;
       max-width: 260px;
       overflow: hidden;
       text-overflow: ellipsis;
-      z-index: 14;            /* keep the tab clickable above the blocks */
+      z-index: 14;
+      /* keep the tab clickable above the blocks */
     }
 
     /* ── Right-click colour menu ── */
@@ -1669,11 +1845,13 @@
       gap: 8px;
       user-select: none;
     }
+
     .ctx-swatches {
       display: grid;
       grid-template-columns: repeat(5, 22px);
       gap: 6px;
     }
+
     .ctx-swatch {
       width: 22px;
       height: 22px;
@@ -1683,9 +1861,21 @@
       padding: 0;
       transition: transform 0.08s;
     }
-    .ctx-swatch:hover { transform: scale(1.12); }
-    .ctx-swatch.active { box-shadow: 0 0 0 2px var(--accent); }
-    .ctx-row { display: flex; align-items: center; gap: 8px; }
+
+    .ctx-swatch:hover {
+      transform: scale(1.12);
+    }
+
+    .ctx-swatch.active {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    .ctx-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .ctx-row input[type="color"] {
       width: 30px;
       height: 26px;
@@ -1695,6 +1885,7 @@
       background: none;
       cursor: pointer;
     }
+
     .ctx-default {
       flex: 1;
       font-size: 12px;
@@ -1706,7 +1897,10 @@
       color: var(--text-1);
       cursor: pointer;
     }
-    .ctx-default:hover { background: var(--bg); }
+
+    .ctx-default:hover {
+      background: var(--bg);
+    }
 
     /* ── Sidebar divider ── */
     .sidebar-divider {
@@ -1847,18 +2041,19 @@
       </div>
     </div>
 
-    <div class="toolbar-menu">
+    <!-- <div class="toolbar-menu">
       <button type="button" class="toolbar-btn toolbar-menu-trigger">View<span class="tb-caret">&#9662;</span></button>
       <div class="toolbar-dropdown">
         <button class="toolbar-btn" id="btn-zoom-in" title="Zoom in">Zoom In</button>
         <button class="toolbar-btn" id="btn-zoom-out" title="Zoom out">Zoom Out</button>
       </div>
-    </div>
+    </div> -->
     <button class="toolbar-btn" id="btn-reset-view" title="Reset view">Reset View</button>
     <span id="zoom-display">100%</span>
 
     <div class="toolbar-menu">
-      <button type="button" class="toolbar-btn toolbar-menu-trigger">Arrange<span class="tb-caret">&#9662;</span></button>
+      <button type="button" class="toolbar-btn toolbar-menu-trigger">Arrange<span
+          class="tb-caret">&#9662;</span></button>
       <div class="toolbar-dropdown">
         <button class="toolbar-btn" id="btn-bring-front" title="Bring selected nodes to front">Front</button>
         <button class="toolbar-btn" id="btn-send-back" title="Send selected nodes to back">Back</button>
@@ -1878,7 +2073,8 @@
     </div>
 
     <div class="toolbar-spacer"></div>
-    <button class="toolbar-btn" id="btn-download-app" title="Download this app as a standalone HTML file">Download App</button>
+    <button class="toolbar-btn" id="btn-download-app" title="Download this app as a standalone HTML file">Download
+      App</button>
     <button class="toolbar-btn" id="btn-fullscreen" title="Full screen view (Esc to exit)">Full Screen</button>
     <button class="toolbar-btn" id="btn-help" title="How to use">Help</button>
   </div>
@@ -1916,24 +2112,31 @@
 
       <h3>Create blocks</h3>
       <ul>
+        <li><b>Double-click</b> on empty canvas to add a text block.</li>
         <li><b>Ctrl + drag</b> on empty canvas to draw a process block at the size you want.</li>
         <li><b>Ctrl + click</b> drops a default process block.</li>
-        <li>Keyboard: <b>Ctrl + P</b> process, <b>S</b> start, <b>E</b> end, <b>D</b> decision, <b>N</b> note, <b>B</b> database, <b>A</b> API, <b>Q</b> queue (block appears at the cursor).</li>
+        <li>Keyboard: <b>Ctrl + P</b> process, <b>T</b> text, <b>S</b> start, <b>E</b> end, <b>D</b> decision, <b>N</b>
+          note, <b>B</b> database, <b>A</b> API, <b>Q</b> queue (block appears at the cursor).</li>
       </ul>
 
       <h3>Edit a block</h3>
       <ul>
-        <li><b>Double-click</b> the title or description to edit it in place (Enter adds a new line, click away to finish).</li>
+        <li><b>Double-click</b> the title or description to edit it in place (Enter adds a new line, click away to
+          finish).</li>
         <li><b>Right-click</b> a block to pick a colour (swatches, a custom colour, or Default).</li>
         <li>Select a block and drag any <b>side or corner</b> to resize it.</li>
-        <li>Add links in the description: a line like <code>L - Label - https://…</code> becomes a clickable link, and bare URLs auto-link. Links stay clickable in the exported SVG.</li>
+        <li>Add links in the description: a line like <code>L - Label - https://…</code> becomes a clickable link, and
+          bare URLs auto-link. Links stay clickable in the exported SVG.</li>
       </ul>
 
       <h3>Connect blocks</h3>
       <ul>
-        <li>Select a block and click its <b>→</b> button, then click the target block. Hold <b>Space</b> and drag to pan to an off-screen block, then click it.</li>
+        <li>Select a block and click its <b>→</b> button, then click the target block. Hold <b>Space</b> and drag to pan
+          to an off-screen block, then click it.</li>
         <li>Or drag from one of a block's edge <b>dots</b> onto another block's dot.</li>
-        <li>Select a connection to get endpoint dots (drag to re-anchor) and a hollow midpoint dot (drag out to add a <b>bend point</b>). Double-click a bend point to remove it.</li>
+        <li>Select a connection to get endpoint dots (drag to re-anchor) and a hollow midpoint dot (drag out to add a
+          <b>bend point</b>). Double-click a bend point to remove it.
+        </li>
         <li><b>Double-click</b> a connection to add a multi-line label.</li>
       </ul>
 
@@ -1948,13 +2151,15 @@
       <h3>Groups</h3>
       <ul>
         <li><b>Ctrl + Shift + drag</b> to draw a dotted group box around blocks.</li>
-        <li>Click the group's <b>label</b> or its <b>border line</b> to select it; double-click the label to rename.</li>
+        <li>Click the group's <b>label</b> or its <b>border line</b> to select it; double-click the label to rename.
+        </li>
         <li>Drag the label to move the group with its blocks; drag a side/corner to resize.</li>
       </ul>
 
       <h3>Save &amp; share</h3>
       <ul>
-        <li>Set the file name in the top-left field — it's used by <b>Save PNG</b>, <b>Save SVG</b>, and <b>Save Diagram</b>.</li>
+        <li>Set the file name in the top-left field — it's used by <b>Save PNG</b>, <b>Save SVG</b>, and <b>Save
+            Diagram</b>.</li>
         <li><b>Save Diagram</b> writes an editable <code>.json</code>; <b>Open Diagram</b> loads it back.</li>
         <li><b>Full Screen</b> shows just the canvas (Esc to exit).</li>
       </ul>
@@ -2148,6 +2353,7 @@
       database: { width: 130, height: 100 },
       api: { width: 210, height: 170 },
       queue: { width: 160, height: 55 },
+      text: { width: 120, height: 36 },
     };
 
     const NODE_MIN_DIMS = {
@@ -2159,6 +2365,7 @@
       database: { w: 80, h: 60 },
       api: { w: 140, h: 110 },
       queue: { w: 80, h: 36 },
+      text: { w: 40, h: 20 },
     };
 
     function getMinDims(type) {
@@ -2186,7 +2393,7 @@
 
     const NODE_LABELS = {
       start: 'Start', end: 'End', process: 'Process', decision: 'Decision?', note: 'Note',
-      database: 'Database', api: 'API Call', queue: 'Queue',
+      database: 'Database', api: 'API Call', queue: 'Queue', text: 'Text',
     };
 
     function getDefaultLabel(type) {
@@ -2209,6 +2416,7 @@
       canvasNodes.addEventListener('mousedown', onCanvasMouseDown);
       canvasSvg.addEventListener('click', onSvgClick);
       canvasSvg.addEventListener('dblclick', onSvgDblClick);
+      canvasContainer.addEventListener('dblclick', onContainerDblClick);
       canvasContainer.addEventListener('wheel', onWheel, { passive: false });
 
       document.addEventListener('mousemove', onDocumentMouseMove);
@@ -2221,10 +2429,10 @@
       // Holding Ctrl should drop the "ctrl-draw" affordance if focus leaves the window.
       window.addEventListener('blur', () => canvasContainer.classList.remove('ctrl-draw'));
 
-      document.getElementById('btn-undo').addEventListener('click', undo);
-      document.getElementById('btn-redo').addEventListener('click', redo);
-      document.getElementById('btn-zoom-in').addEventListener('click', () => zoomAtCenter(ZOOM_STEP));
-      document.getElementById('btn-zoom-out').addEventListener('click', () => zoomAtCenter(-ZOOM_STEP));
+      document.getElementById('btn-undo')?.addEventListener('click', undo);
+      document.getElementById('btn-redo')?.addEventListener('click', redo);
+      document.getElementById('btn-zoom-in')?.addEventListener('click', () => zoomAtCenter(ZOOM_STEP));
+      document.getElementById('btn-zoom-out')?.addEventListener('click', () => zoomAtCenter(-ZOOM_STEP));
       document.getElementById('btn-reset-view').addEventListener('click', resetView);
       document.getElementById('btn-export-png').addEventListener('click', exportPNG);
       document.getElementById('btn-export-svg').addEventListener('click', exportSVG);
@@ -2458,9 +2666,8 @@
       el.style.height = 'auto';
       const natural = el.offsetHeight;
       const min = getMinDims(node.type);
-      // A user-set height (from drawing or dragging a top/bottom handle) acts as a
-      // floor — the block keeps that height but still grows for longer content.
-      const floor = collapsed ? 36 : Math.max(min.h, node.manualHeight || 0);
+      // A user-set height acts as a floor — but text nodes shouldn't have manual height floors.
+      const floor = (node.type === 'text') ? min.h : (collapsed ? 36 : Math.max(min.h, node.manualHeight || 0));
       const newH = Math.max(floor, natural);
       el.style.height = newH + 'px';
       if (node.height !== newH) {
@@ -2560,7 +2767,7 @@
       label.appendChild(labelText);
       el.appendChild(label);
 
-      if (node.type !== 'decision' && node.type !== 'process') {
+      if (node.type !== 'decision' && node.type !== 'process' && node.type !== 'text') {
         const caret = document.createElement('span');
         caret.className = 'node-label-caret';
         caret.textContent = '▾';
@@ -2595,7 +2802,7 @@
         startNotesEdit(node.id, e.clientX, e.clientY);
       });
 
-      if (node.type !== 'decision' && node.type !== 'process') {
+      if (node.type !== 'decision' && node.type !== 'process' && node.type !== 'text') {
         // Collapsible extra content wrapper
         const extraEl = document.createElement('div');
         extraEl.className = 'node-extra';
@@ -2653,7 +2860,7 @@
           toggleBtn.textContent = '+';
         }
       } else {
-        // decision & process: no accordion — description always shown in full
+        // decision & process & text: no accordion — description always shown in full
         el.appendChild(desc);
       }
 
@@ -2670,27 +2877,30 @@
         }
       });
 
-      // Per-node connect button (appears on hover, right side)
-      const connectBtn = document.createElement('button');
-      connectBtn.type = 'button';
-      connectBtn.className = 'node-connect-btn';
-      connectBtn.title = 'Connect to another node';
-      connectBtn.textContent = '→';
-      connectBtn.addEventListener('mousedown', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        activateConnectSource(el.dataset.nodeId);
-      });
-      el.appendChild(connectBtn);
+      if (node.type !== 'text') {
+        // Per-node connect button (appears on hover, right side)
+        const connectBtn = document.createElement('button');
+        connectBtn.type = 'button';
+        connectBtn.className = 'node-connect-btn';
+        connectBtn.title = 'Connect to another node';
+        connectBtn.textContent = '→';
+        connectBtn.addEventListener('mousedown', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          activateConnectSource(el.dataset.nodeId);
+        });
+        el.appendChild(connectBtn);
 
-      ['top', 'right', 'bottom', 'left'].forEach(port => {
-        const p = document.createElement('div');
-        p.className = 'port';
-        p.dataset.port = port;
-        p.dataset.nodeId = node.id;
-        el.appendChild(p);
-      });
+        ['top', 'right', 'bottom', 'left'].forEach(port => {
+          const p = document.createElement('div');
+          p.className = 'port';
+          p.dataset.port = port;
+          p.dataset.nodeId = node.id;
+          el.appendChild(p);
+        });
+      }
 
+      // Resize handles — available for all node types including text
       ['tl', 'tc', 'tr', 'rc', 'br', 'bc', 'bl', 'lc'].forEach(h => {
         const rh = document.createElement('div');
         rh.className = 'resize-handle';
@@ -2698,6 +2908,17 @@
         rh.dataset.nodeId = node.id;
         el.appendChild(rh);
       });
+
+      // Single-click on a text node enters edit mode (but not if the user dragged)
+      if (node.type === 'text') {
+        el.addEventListener('mouseup', e => {
+          if (state.dragging.didMove) return;
+          if (e.target.closest('.resize-handle')) return;
+          const labelEl = el.querySelector('.node-label-text');
+          if (labelEl && labelEl.contentEditable === 'true') return;
+          startLabelEdit(el.dataset.nodeId, e.clientX, e.clientY);
+        });
+      }
 
       return el;
     }
@@ -2789,7 +3010,7 @@
 
     // ── Inline editing ────────────────────────────────────────────────────────
 
-    function startLabelEdit(nodeId) {
+    function startLabelEdit(nodeId, clientX, clientY) {
       const node = state.nodes[nodeId];
       if (!node) return;
       const labelEl = node.element.querySelector('.node-label-text') ||
@@ -2800,11 +3021,36 @@
       labelEl.contentEditable = 'true';
       labelEl.focus();
 
-      const range = document.createRange();
-      range.selectNodeContents(labelEl);
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
+      if (clientX != null && clientY != null) {
+        // Place cursor at the click position
+        let range = null;
+        if (document.caretRangeFromPoint) range = document.caretRangeFromPoint(clientX, clientY);
+        else if (document.caretPositionFromPoint) {
+          const p = document.caretPositionFromPoint(clientX, clientY);
+          if (p) { range = document.createRange(); range.setStart(p.offsetNode, p.offset); }
+        }
+        if (range && labelEl.contains(range.startContainer)) {
+          range.collapse(true);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        } else {
+          // Fallback: place cursor at end
+          const range2 = document.createRange();
+          range2.selectNodeContents(labelEl);
+          range2.collapse(false);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range2);
+        }
+      } else {
+        // No coordinates: select all (e.g. double-click to rename)
+        const range = document.createRange();
+        range.selectNodeContents(labelEl);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
 
       let done = false;
 
@@ -2833,9 +3079,14 @@
       }
 
       labelEl.addEventListener('blur', commit, { once: true });
+      labelEl.addEventListener('input', () => autoResizeNode(node));
       labelEl.addEventListener('keydown', e => {
         e.stopPropagation();
-        if (e.key === 'Enter') { e.preventDefault(); labelEl.blur(); }
+        if (e.key === 'Enter') {
+          if (node.type === 'text') return; // Allow Enter to go to new line
+          e.preventDefault();
+          labelEl.blur();
+        }
         if (e.key === 'Escape') { cancel(); labelEl.removeEventListener('blur', commit); }
       });
     }
@@ -3141,6 +3392,7 @@
       state.dragging.active = true;
       state.dragging.lastX = wc.x;
       state.dragging.lastY = wc.y;
+      state.dragging.didMove = false;
 
       dragStartPositions = {};
       for (const nodeId of state.selectedNodeIds) {
@@ -3467,7 +3719,7 @@
       for (const n of Object.values(state.nodes)) {
         const cx = n.x + n.width / 2, cy = n.y + n.height / 2;
         if (cx >= group.x && cx <= group.x + group.width &&
-            cy >= group.y && cy <= group.y + group.height) out.push(n);
+          cy >= group.y && cy <= group.y + group.height) out.push(n);
       }
       return out;
     }
@@ -3529,7 +3781,7 @@
       // Move bend points of fully-internal connections by the same delta.
       for (const c of Object.values(state.connections)) {
         if (c.waypoints && c.waypoints.length &&
-            d.movedSet.has(c.fromNodeId) && d.movedSet.has(c.toNodeId)) {
+          d.movedSet.has(c.fromNodeId) && d.movedSet.has(c.toNodeId)) {
           for (const p of c.waypoints) { p.x += dx; p.y += dy; }
         }
       }
@@ -3761,6 +4013,7 @@
         const wc = toWorldCoords(e.clientX, e.clientY);
         let dx = wc.x - state.dragging.lastX;
         let dy = wc.y - state.dragging.lastY;
+        if (dx !== 0 || dy !== 0) state.dragging.didMove = true;
         state.dragging.lastX = wc.x;
         state.dragging.lastY = wc.y;
 
@@ -4122,6 +4375,7 @@
     }
 
     function createConnection(fromNodeId, fromPort, toNodeId, toPort, label = '', anchored = null, waypoints = null) {
+      if (state.nodes[fromNodeId]?.type === 'text' || state.nodes[toNodeId]?.type === 'text') return;
       for (const c of Object.values(state.connections)) {
         if (c.fromNodeId === fromNodeId && c.fromPort === fromPort &&
           c.toNodeId === toNodeId && c.toPort === toPort) return;
@@ -5158,6 +5412,42 @@
       }
     }
 
+    function onContainerDblClick(e) {
+      if (e.button !== 0) return;
+      if (e.target.closest('.node') ||
+        e.target.closest('.port') ||
+        e.target.closest('.resize-handle') ||
+        e.target.closest('.group-rect-label') ||
+        e.target.closest('.node-notes-editor') ||
+        e.target.closest('[contenteditable="true"]') ||
+        e.target.closest('path.connection, path.connection-hit')) {
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const wc = toWorldCoords(e.clientX, e.clientY);
+      const dims = NODE_DIMS.text;
+      const x = wc.x - dims.width / 2;
+      const y = wc.y - dims.height / 2;
+
+      clearSelection();
+      const node = createNode('text', x, y);
+      addToSelection(node.id);
+
+      const nodeId = node.id;
+      pushUndo(() => {
+        state.selectedNodeIds.delete(nodeId);
+        deleteNode(nodeId);
+        renumberNodes();
+        updatePropsPanel();
+      });
+
+      renumberNodes();
+      startLabelEdit(node.id);
+    }
+
     function onSvgClick(e) {
       const path = e.target.closest('path.connection-hit, path.connection');
       if (path && path.dataset.connId) selectConnection(path.dataset.connId);
@@ -5244,7 +5534,7 @@
       if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
         const shortcuts = {
           s: 'start', e: 'end', p: 'process', d: 'decision',
-          n: 'note', b: 'database', a: 'api', q: 'queue'
+          n: 'note', b: 'database', a: 'api', q: 'queue', t: 'text'
         };
         const type = shortcuts[e.key.toLowerCase()];
         if (type) {
@@ -5577,7 +5867,7 @@
     // ── Right-click colour menu ──────────────────────────────────────────────────
 
     const NODE_COLORS = ['#ffffff', '#fde68a', '#bbf7d0', '#bfdbfe', '#ddd6fe',
-                         '#fbcfe8', '#fed7aa', '#fecaca', '#cffafe', '#e5e7eb'];
+      '#fbcfe8', '#fed7aa', '#fecaca', '#cffafe', '#e5e7eb'];
     let colorMenuEl = null;
 
     function setNodeColor(nodeId, color) {
@@ -6411,6 +6701,18 @@
       ctx.save();
 
       switch (node.type) {
+        case 'text':
+          if (node.customColor) {
+            pngRoundRect(ctx, x, y, w, h, 6, node.customColor, node.customColor);
+          }
+          if (hasNotes) {
+            pngText(ctx, node.label, x + w / 2, y + 16, w - 16, 'center');
+            pngDrawNotes(ctx, node.notes, x + 10, y + 32, w - 20, y + h - 8);
+          } else {
+            pngText(ctx, node.label, x + w / 2, y + h / 2, w - 16, 'center');
+          }
+          break;
+
         case 'start':
         case 'end':
           pngPill(ctx, x, y, w, h, '#dcfce7', '#86efac');
@@ -6502,7 +6804,7 @@
       }
 
       // Sequence badge
-      if (node.seq) {
+      if (node.seq && node.type !== 'text') {
         const bx = x - 6, by = y - 6, br = 9;
         ctx.fillStyle = '#6366f1';
         ctx.beginPath();
