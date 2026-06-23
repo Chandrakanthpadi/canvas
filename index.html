@@ -1138,11 +1138,21 @@
       text-align: left;
     }
 
+    .node-desc ol {
+      list-style: decimal;
+      padding-left: 16px;
+      margin: 0;
+      text-align: left;
+    }
+
     .node-desc li {
       margin: 0;
     }
 
-    .node-desc br:last-child {
+    /* Hide a trailing line break only when displaying — during editing the
+       trailing <br> is the sentinel that makes the final empty line (and its
+       caret) visible, so it must render. */
+    .node-desc:not(.editing) br:last-child {
       display: none;
     }
 
@@ -1157,8 +1167,9 @@
       padding: 0;
     }
 
-    .node--note .node-desc ul {
-      padding-left: 12px;
+    .node--note .node-desc ul,
+    .node--note .node-desc ol {
+      padding-left: 14px;
     }
 
     /* ── Inline notes editor ── */
@@ -2347,7 +2358,7 @@
     const NODE_DIMS = {
       start: { width: 120, height: 50 },
       end: { width: 120, height: 50 },
-      process: { width: 150, height: 60 },
+      process: { width: 200, height: 60 },
       decision: { width: 120, height: 80 },
       note: { width: 140, height: 90 },
       database: { width: 130, height: 100 },
@@ -2580,28 +2591,38 @@
 
       const lines = raw.split('\n');
       let html = '';
-      let inList = false;
+      let inUl = false, inOl = false;
+      const closeLists = () => {
+        if (inUl) { html += '</ul>'; inUl = false; }
+        if (inOl) { html += '</ol>'; inOl = false; }
+      };
 
       for (const line of lines) {
         const trimmed = line.trim();
         // "L - label - URL" → a labelled clickable link.
         const linkM = trimmed.match(/^L\s*-\s*(.+?)\s*-\s*(\S.*)$/i);
         if (linkM) {
-          if (inList) { html += '</ul>'; inList = false; }
+          closeLists();
           html += linkAnchor(linkM[1], linkM[2]) + '<br>';
           continue;
         }
         const bullet = trimmed.match(/^[-*•]\s+(.*)/);
+        const numbered = trimmed.match(/^\d+[.)]\s+(.*)/);
         if (bullet) {
-          if (!inList) { html += '<ul>'; inList = true; }
+          if (inOl) { html += '</ol>'; inOl = false; }
+          if (!inUl) { html += '<ul>'; inUl = true; }
           html += `<li>${linkifyText(bullet[1])}</li>`;
+        } else if (numbered) {
+          if (inUl) { html += '</ul>'; inUl = false; }
+          if (!inOl) { html += '<ol>'; inOl = true; }
+          html += `<li>${linkifyText(numbered[1])}</li>`;
         } else {
-          if (inList) { html += '</ul>'; inList = false; }
+          closeLists();
           html += trimmed ? `<span>${linkifyText(trimmed)}</span><br>` : '<br>';
         }
       }
 
-      if (inList) html += '</ul>';
+      closeLists();
       return html.replace(/(<br>)+$/, '');
     }
 
@@ -2684,7 +2705,8 @@
 
       const node = {
         id, type,
-        seq: ++state.seqCounter,
+        // Text nodes are annotations, not steps — they never get a step number.
+        seq: type === 'text' ? null : ++state.seqCounter,
         label: getDefaultLabel(type),
         notes: '',
         responseTeam: '',
@@ -2909,11 +2931,22 @@
         el.appendChild(rh);
       });
 
-      // Single-click on a text node enters edit mode (but not if the user dragged)
-      if (node.type === 'text') {
+      // Single-click on a text or process node enters edit mode at the cursor
+      // (no select-all), but not if the user dragged or clicked a control.
+      if (node.type === 'text' || node.type === 'process') {
         el.addEventListener('mouseup', e => {
-          if (state.dragging.didMove) return;
-          if (e.target.closest('.resize-handle')) return;
+          if (state.dragging.didMove || e.shiftKey) return;
+          if (state.connectMode.fromNodeId !== null) return;
+          if (e.target.closest('.resize-handle') || e.target.closest('.port') ||
+              e.target.closest('.node-link') || e.target.closest('.node-connect-btn') ||
+              e.target.closest('.node-seq')) return;
+          // Click on the description area edits the notes; elsewhere edits the title.
+          if (e.target.closest('.node-desc')) {
+            const descEl = el.querySelector('.node-desc');
+            if (descEl && descEl.isContentEditable) return;
+            startNotesEdit(el.dataset.nodeId, e.clientX, e.clientY);
+            return;
+          }
           const labelEl = el.querySelector('.node-label-text');
           if (labelEl && labelEl.contentEditable === 'true') return;
           startLabelEdit(el.dataset.nodeId, e.clientX, e.clientY);
@@ -3054,9 +3087,17 @@
 
       let done = false;
 
+      // Tear listeners down when editing ends so re-edits don't stack handlers.
+      function cleanup() {
+        labelEl.removeEventListener('blur', commit);
+        labelEl.removeEventListener('input', onInput);
+        labelEl.removeEventListener('keydown', onKey);
+      }
+
       function commit() {
         if (done) return;
         done = true;
+        cleanup();
         labelEl.contentEditable = 'false';
         const newLabel = (labelEl.textContent || '').trim() || oldLabel;
         labelEl.textContent = newLabel;
@@ -3074,21 +3115,32 @@
       function cancel() {
         if (done) return;
         done = true;
+        cleanup();
         labelEl.contentEditable = 'false';
         labelEl.textContent = oldLabel;
       }
 
-      labelEl.addEventListener('blur', commit, { once: true });
-      labelEl.addEventListener('input', () => autoResizeNode(node));
-      labelEl.addEventListener('keydown', e => {
+      function onInput() { autoResizeNode(node); }
+      function onKey(e) {
         e.stopPropagation();
+        if (e.key === 'Tab') {
+          // Commit the title, then jump straight into editing the description.
+          e.preventDefault();
+          commit();
+          startNotesEdit(nodeId);
+          return;
+        }
         if (e.key === 'Enter') {
           if (node.type === 'text') return; // Allow Enter to go to new line
           e.preventDefault();
           labelEl.blur();
         }
-        if (e.key === 'Escape') { cancel(); labelEl.removeEventListener('blur', commit); }
-      });
+        if (e.key === 'Escape') { cancel(); }
+      }
+
+      labelEl.addEventListener('blur', commit, { once: true });
+      labelEl.addEventListener('input', onInput);
+      labelEl.addEventListener('keydown', onKey);
     }
 
     // Inline-edit the step number on a node. Committing renumbers every node so
@@ -3163,6 +3215,109 @@
       if (changed) pushUndo(() => restoreSeqs(before));
     }
 
+    // Caret position as a plain-text offset within a contenteditable element.
+    function getCaretOffsetIn(root) {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return null;
+      const range = sel.getRangeAt(0);
+      const pre = range.cloneRange();
+      pre.selectNodeContents(root);
+      pre.setEnd(range.endContainer, range.endOffset);
+      return pre.toString().length;
+    }
+
+    // Place the caret at a plain-text offset within a contenteditable element.
+    function setCaretOffsetIn(root, offset) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+      let remaining = offset, target = null, targetOffset = 0, n;
+      while ((n = walker.nextNode())) {
+        const len = n.textContent.length;
+        if (remaining <= len) { target = n; targetOffset = remaining; break; }
+        remaining -= len;
+      }
+      const range = document.createRange();
+      if (target) range.setStart(target, targetOffset);
+      else { range.selectNodeContents(root); range.collapse(false); }
+      range.collapse(true);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    // A contenteditable won't render the final empty line when its text ends in
+    // "\n" — the caret then falls back to the previous row, so typing the start
+    // of a new list merges onto it. A trailing <br> makes that line visible; it
+    // adds nothing to textContent, so commit/parse stays clean.
+    function ensureTrailingBreak(el) {
+      const last = el.lastChild;
+      const hasSentinel = last && last.nodeName === 'BR';
+      const endsWithNL = /\n$/.test(el.textContent);
+      if (endsWithNL && !hasSentinel) el.appendChild(document.createElement('br'));
+      else if (!endsWithNL && hasSentinel) el.removeChild(last);
+    }
+
+    // Enter inside a bulleted/numbered list auto-starts the next item; pressing
+    // Enter on an empty item drops out of the list. Returns true if handled.
+    function handleNotesListEnter(el) {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount || !sel.getRangeAt(0).collapsed) return false;
+      const text = el.textContent;
+      const offset = getCaretOffsetIn(el);
+      if (offset == null) return false;
+
+      const lineStart = text.lastIndexOf('\n', offset - 1) + 1;
+      let lineEnd = text.indexOf('\n', offset);
+      if (lineEnd === -1) lineEnd = text.length;
+      const line = text.slice(lineStart, lineEnd);
+
+      const bulletM = line.match(/^(\s*)([-*•])(\s+)(.*)$/);
+      const numM = line.match(/^(\s*)(\d+)([.)])(\s+)(.*)$/);
+
+      const rebuild = (start, end, replacement, caret) => {
+        const updated = text.slice(0, start) + replacement + text.slice(end);
+        el.textContent = updated;
+        ensureTrailingBreak(el);
+        const br = el.lastChild;
+        if (caret >= updated.length && br && br.nodeName === 'BR') {
+          // Caret belongs on the trailing empty line. Anchoring it inside the
+          // text node (just after "\n") makes the browser render it on the
+          // previous row, so place it at the element level right before the
+          // sentinel <br> instead — that reliably lands on the new line.
+          const range = document.createRange();
+          range.setStartBefore(br);
+          range.collapse(true);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        } else {
+          setCaretOffsetIn(el, caret);
+        }
+      };
+
+      if (bulletM) {
+        const [, indent, marker, sp, content] = bulletM;
+        if (content.trim() === '') {                 // empty item → leave the list
+          rebuild(lineStart, lineEnd, indent, lineStart + indent.length);
+        } else {                                      // continue with a new bullet
+          const insert = '\n' + indent + marker + sp;
+          rebuild(offset, offset, insert, offset + insert.length);
+        }
+      } else if (numM) {
+        const [, indent, numStr, dot, sp, content] = numM;
+        if (content.trim() === '') {                 // empty item → leave the list
+          rebuild(lineStart, lineEnd, indent, lineStart + indent.length);
+        } else {                                      // continue with the next number
+          const insert = '\n' + indent + (parseInt(numStr, 10) + 1) + dot + sp;
+          rebuild(offset, offset, insert, offset + insert.length);
+        }
+      } else {
+        // Plain line: insert a newline ourselves so the editor keeps a clean
+        // \n-delimited text model (browsers otherwise inject <div>/<br>).
+        rebuild(offset, offset, '\n', offset + 1);
+      }
+      return true;
+    }
+
     function startNotesEdit(nodeId, clickX, clickY) {
       const node = state.nodes[nodeId];
       if (!node) return;
@@ -3212,9 +3367,19 @@
 
       let done = false;
 
+      // Listeners must be torn down when editing ends — otherwise each re-edit
+      // stacks another keydown handler and a single Enter runs the list logic
+      // multiple times.
+      function cleanup() {
+        descEl.removeEventListener('blur', commit);
+        descEl.removeEventListener('input', onInput);
+        descEl.removeEventListener('keydown', onKey);
+      }
+
       function commit() {
         if (done) return;
         done = true;
+        cleanup();
         const newNotes = descEl.textContent || '';
         descEl.contentEditable = 'false';
         descEl.classList.remove('editing');
@@ -3235,6 +3400,7 @@
       function cancel() {
         if (done) return;
         done = true;
+        cleanup();
         descEl.contentEditable = 'false';
         descEl.classList.remove('editing');
         node.notes = oldNotes;
@@ -3242,12 +3408,20 @@
         autoResizeNode(node);
       }
 
-      descEl.addEventListener('blur', commit, { once: true });
-      descEl.addEventListener('input', () => autoResizeNode(node));
-      descEl.addEventListener('keydown', e => {
+      function onInput() { ensureTrailingBreak(descEl); autoResizeNode(node); }
+      function onKey(e) {
         e.stopPropagation();
-        if (e.key === 'Escape') { cancel(); descEl.removeEventListener('blur', commit); }
-      });
+        if (e.key === 'Escape') { cancel(); return; }
+        if (e.key === 'Enter' && handleNotesListEnter(descEl)) {
+          e.preventDefault();
+          autoResizeNode(node);
+        }
+      }
+
+      ensureTrailingBreak(descEl);
+      descEl.addEventListener('blur', commit, { once: true });
+      descEl.addEventListener('input', onInput);
+      descEl.addEventListener('keydown', onKey);
     }
 
     // ── Container mousedown (for panning) ─────────────────────────────────────
@@ -3609,6 +3783,9 @@
         renumberNodes();
         updatePropsPanel();
       });
+
+      // Drop straight into editing the title (Tab then jumps to the description).
+      startLabelEdit(nodeId);
     }
 
     // ── Group boxes (Ctrl/Cmd+Shift+drag) ───────────────────────────────────────
@@ -4234,6 +4411,9 @@
             renumberNodes();
             updatePropsPanel();
           });
+
+          // A new process block opens for editing immediately (Tab → description).
+          if (node.type === 'process') startLabelEdit(nodeId);
         }
 
         state.pendingCreate.active = false;
@@ -5364,13 +5544,20 @@
     function renumberNodes() {
       const nodes = Object.values(state.nodes).sort((a, b) => (a.seq || 0) - (b.seq || 0));
       const before = nodes.map(n => ({ id: n.id, seq: n.seq }));
-      nodes.forEach((n, i) => {
-        const newSeq = i + 1;
-        n.seq = newSeq;
+      // Text nodes are annotations — skip them so steps stay contiguous 1..N.
+      let counter = 0;
+      nodes.forEach((n) => {
         const seqEl = n.element.querySelector('.node-seq');
+        if (n.type === 'text') {
+          n.seq = null;
+          if (seqEl) seqEl.textContent = '';
+          return;
+        }
+        const newSeq = ++counter;
+        n.seq = newSeq;
         if (seqEl) seqEl.textContent = newSeq;
       });
-      state.seqCounter = nodes.length;
+      state.seqCounter = counter;
       return before;
     }
 
@@ -6128,6 +6315,9 @@
         renumberNodes();
         updatePropsPanel();
       });
+
+      // A new process block opens for editing immediately (Tab → description).
+      if (node.type === 'process') startLabelEdit(nodeId);
     }
 
     function onKeyUp(e) {
