@@ -7,7 +7,6 @@
   <title>Canvas</title>
   <link rel="icon" type="image/svg+xml"
     href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%236366f1'/%3E%3Crect%20x='6'%20y='7'%20width='9'%20height='7'%20rx='2'%20fill='%23ffffff'/%3E%3Crect%20x='17'%20y='18'%20width='9'%20height='7'%20rx='2'%20fill='%23ffffff'/%3E%3Cpath%20d='M10.5%2014V17a1%201%200%200%200%201%201h6'%20fill='none'%20stroke='%23ffffff'%20stroke-width='2.2'%20stroke-linecap='round'/%3E%3C/svg%3E">
-  <!-- <link rel="stylesheet" href="style.css"> -->
   <style>
     :root {
       --bg: #f4f4f5;
@@ -1106,12 +1105,6 @@
       transition: background 0.12s;
     }
 
-    .node-desc.is-empty::before {
-      content: 'Add Desciption..';
-      color: var(--text-3);
-      font-style: italic;
-    }
-
     .node-desc.is-empty:hover {
       background: rgba(15, 23, 42, 0.03);
     }
@@ -1387,12 +1380,9 @@
       opacity: 1;
     }
 
-    /* ── Per-node connect button ── */
+    /* ── Per-node connect buttons (all four sides) ── */
     .node-connect-btn {
       position: absolute;
-      right: -26px;
-      top: 50%;
-      transform: translateY(-50%);
       width: 20px;
       height: 20px;
       border-radius: 50%;
@@ -1400,7 +1390,7 @@
       color: #fff;
       border: none;
       cursor: pointer;
-      font-size: 12px;
+      font-size: 11px;
       line-height: 1;
       display: flex;
       align-items: center;
@@ -1409,10 +1399,15 @@
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.15s, background 0.12s;
-      z-index: 10;
+      z-index: 17;
       user-select: none;
       font-family: var(--font);
     }
+
+    .node-connect-btn[data-side="top"]    { top: -24px;    left: 50%;  transform: translateX(-50%); }
+    .node-connect-btn[data-side="right"]  { right: -24px;  top: 50%;   transform: translateY(-50%); }
+    .node-connect-btn[data-side="bottom"] { bottom: -24px; left: 50%;  transform: translateX(-50%); }
+    .node-connect-btn[data-side="left"]   { left: -24px;   top: 50%;   transform: translateY(-50%); }
 
     .node.selected .node-connect-btn {
       opacity: 1;
@@ -1423,7 +1418,8 @@
       background: var(--accent-h);
     }
 
-    .node.connect-source .node-connect-btn {
+    .node.connect-source .node-connect-btn,
+    .node.connecting-source .node-connect-btn {
       opacity: 0;
       pointer-events: none;
     }
@@ -1620,7 +1616,16 @@
       pointer-events: all;
       background: var(--accent);
       border-color: var(--surface);
+      width: 9px;
+      height: 9px;
     }
+
+    .group-resize-box .resize-handle[data-handle="tl"] { top: 0;    left: 0;    cursor: nwse-resize; }
+    .group-resize-box .resize-handle[data-handle="tc"] { top: 0;    left: 50%;  cursor: ns-resize;   }
+    .group-resize-box .resize-handle[data-handle="tr"] { top: 0;    left: 100%; cursor: nesw-resize; }
+    .group-resize-box .resize-handle[data-handle="bl"] { top: 100%; left: 0;    cursor: nesw-resize; }
+    .group-resize-box .resize-handle[data-handle="bc"] { top: 100%; left: 50%;  cursor: ns-resize;   }
+    .group-resize-box .resize-handle[data-handle="br"] { top: 100%; left: 100%; cursor: nwse-resize; }
 
     /* ── Properties Panel ── */
     #props-panel {
@@ -2177,7 +2182,6 @@
     </div>
   </div>
 
-  <!-- <script src="script.js"></script> -->
   <script>
     'use strict';
 
@@ -2267,7 +2271,7 @@
 
       pan: { x: 0, y: 0 },
       panning: { active: false, lastX: 0, lastY: 0 },
-      connectMode: { fromNodeId: null },
+      connectMode: { fromNodeId: null, fromPort: null },
       zoom: 1,
       seqCounter: 0,
 
@@ -2277,7 +2281,8 @@
         startMouseX: 0,
         startMouseY: 0,
         startBox: null,
-        startNodes: null
+        startNodes: null,
+        startWaypoints: null
       },
       groupBoxEl: null
     };
@@ -2358,7 +2363,7 @@
     const NODE_DIMS = {
       start: { width: 120, height: 50 },
       end: { width: 120, height: 50 },
-      process: { width: 200, height: 60 },
+      process: { width: 200, height: 100 },
       decision: { width: 120, height: 80 },
       note: { width: 140, height: 90 },
       database: { width: 130, height: 100 },
@@ -2900,18 +2905,26 @@
       });
 
       if (node.type !== 'text') {
-        // Per-node connect button (appears on hover, right side)
-        const connectBtn = document.createElement('button');
-        connectBtn.type = 'button';
-        connectBtn.className = 'node-connect-btn';
-        connectBtn.title = 'Connect to another node';
-        connectBtn.textContent = '→';
-        connectBtn.addEventListener('mousedown', e => {
-          e.preventDefault();
-          e.stopPropagation();
-          activateConnectSource(el.dataset.nodeId);
+        // Connect buttons on all four sides (appear on selection)
+        [
+          { side: 'top', icon: '↑' },
+          { side: 'right', icon: '→' },
+          { side: 'bottom', icon: '↓' },
+          { side: 'left', icon: '←' },
+        ].forEach(({ side, icon }) => {
+          const connectBtn = document.createElement('button');
+          connectBtn.type = 'button';
+          connectBtn.className = 'node-connect-btn';
+          connectBtn.dataset.side = side;
+          connectBtn.title = `Connect from ${side} — click a target node`;
+          connectBtn.textContent = icon;
+          connectBtn.addEventListener('mousedown', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            activateConnectSource(el.dataset.nodeId, side);
+          });
+          el.appendChild(connectBtn);
         });
-        el.appendChild(connectBtn);
 
         ['top', 'right', 'bottom', 'left'].forEach(port => {
           const p = document.createElement('div');
@@ -2940,13 +2953,15 @@
           if (e.target.closest('.resize-handle') || e.target.closest('.port') ||
               e.target.closest('.node-link') || e.target.closest('.node-connect-btn') ||
               e.target.closest('.node-seq')) return;
-          // Click on the description area edits the notes; elsewhere edits the title.
+          // Click on the description area edits the notes.
           if (e.target.closest('.node-desc')) {
             const descEl = el.querySelector('.node-desc');
             if (descEl && descEl.isContentEditable) return;
             startNotesEdit(el.dataset.nodeId, e.clientX, e.clientY);
             return;
           }
+          // Only enter title edit when clicking directly on the label area.
+          if (!e.target.closest('.node-label')) return;
           const labelEl = el.querySelector('.node-label-text');
           if (labelEl && labelEl.contentEditable === 'true') return;
           startLabelEdit(el.dataset.nodeId, e.clientX, e.clientY);
@@ -3489,11 +3504,11 @@
           e.preventDefault();
           e.stopPropagation();
           const nodeId = nodeEl.dataset.nodeId;
-          const { fromNodeId } = state.connectMode;
+          const { fromNodeId, fromPort: fixedFromPort } = state.connectMode;
           if (fromNodeId === nodeId) {
             clearConnectSource();
           } else {
-            const { fromPort, toPort } = pickBestPorts(fromNodeId, nodeId);
+            const { fromPort, toPort } = pickBestPorts(fromNodeId, nodeId, fixedFromPort, null);
             createConnection(fromNodeId, fromPort, nodeId, toPort);
             clearConnectSource();
           }
@@ -3583,7 +3598,7 @@
       const node = state.nodes[nodeId];
       if (!node || node.locked) return;
       const wc = toWorldCoords(e.clientX, e.clientY);
-      const base = getMinDims(node.type);
+      const base = getContentMinDims(node);
 
       resizeUndoSnapshot = { nodeId, x: node.x, y: node.y, width: node.width, height: node.height, manualHeight: node.manualHeight || null };
 
@@ -4353,9 +4368,11 @@
       // End group resize
       if (state.groupResize.active) {
         const snap = state.groupResize.startNodes;
+        const snapWps = state.groupResize.startWaypoints;
         state.groupResize.active = false;
         state.groupResize.startNodes = null;
         state.groupResize.startBox = null;
+        state.groupResize.startWaypoints = null;
 
         if (snap) {
           const changed = Object.keys(snap).some(id => {
@@ -4375,6 +4392,12 @@
                 n.element.style.width = n.width + 'px';
                 n.element.style.height = n.height + 'px';
                 updateConnectionsForNode(id);
+              }
+              if (snapWps) {
+                for (const [cid, wps] of Object.entries(snapWps)) {
+                  const conn = state.connections[cid];
+                  if (conn) conn.waypoints = wps.map(p => ({ x: p.x, y: p.y }));
+                }
               }
               updateGroupResizeBox();
             });
@@ -4706,9 +4729,10 @@
 
     // ── Connect Mode ────────────────────────────────────────────────────────────
 
-    function activateConnectSource(nodeId) {
+    function activateConnectSource(nodeId, port = null) {
       clearConnectSource();
       state.connectMode.fromNodeId = nodeId;
+      state.connectMode.fromPort = port;
       state.nodes[nodeId]?.element.classList.add('connect-source');
       canvasContainer.classList.add('connect-mode');
     }
@@ -4717,6 +4741,7 @@
       if (state.connectMode.fromNodeId) {
         state.nodes[state.connectMode.fromNodeId]?.element.classList.remove('connect-source');
         state.connectMode.fromNodeId = null;
+        state.connectMode.fromPort = null;
       }
       canvasContainer.classList.remove('connect-mode');
     }
@@ -5422,45 +5447,82 @@
         startNodes[id] = { x: n.x, y: n.y, width: n.width, height: n.height };
       }
 
+      const startWaypoints = {};
+      for (const c of Object.values(state.connections)) {
+        if (c.waypoints && c.waypoints.length &&
+            state.selectedNodeIds.has(c.fromNodeId) && state.selectedNodeIds.has(c.toNodeId)) {
+          startWaypoints[c.id] = c.waypoints.map(p => ({ x: p.x, y: p.y }));
+        }
+      }
+
       state.groupResize.active = true;
       state.groupResize.handle = handle;
       state.groupResize.startMouseX = wc.x;
       state.groupResize.startMouseY = wc.y;
       state.groupResize.startBox = startBox;
       state.groupResize.startNodes = startNodes;
+      state.groupResize.startWaypoints = startWaypoints;
     }
 
     function applyGroupResize(curX, curY) {
       const { handle, startMouseX, startMouseY, startBox, startNodes } = state.groupResize;
       const MIN = 20;
 
-      let nx = startBox.x, ny = startBox.y, nw = startBox.w, nh = startBox.h;
       const dx = curX - startMouseX;
       const dy = curY - startMouseY;
 
-      if (handle.includes('r')) nw = Math.max(MIN, startBox.w + dx);
-      if (handle.includes('b')) nh = Math.max(MIN, startBox.h + dy);
-      if (handle.includes('l')) { nw = Math.max(MIN, startBox.w - dx); nx = startBox.x + startBox.w - nw; }
-      if (handle.includes('t')) { nh = Math.max(MIN, startBox.h - dy); ny = startBox.y + startBox.h - nh; }
+      // Compute raw scale per active axis
+      let rawSx = 1, rawSy = 1;
+      if (handle.includes('r')) rawSx = (startBox.w + dx) / startBox.w;
+      if (handle.includes('l')) rawSx = (startBox.w - dx) / startBox.w;
+      if (handle.includes('b')) rawSy = (startBox.h + dy) / startBox.h;
+      if (handle.includes('t')) rawSy = (startBox.h - dy) / startBox.h;
 
-      const sx = nw / startBox.w;
-      const sy = nh / startBox.h;
+      // Uniform scale: corners use dominant axis, edge handles use their single axis
+      let s;
+      const isCorner = !handle.includes('c');
+      if (isCorner) {
+        s = Math.abs(dx) >= Math.abs(dy) ? rawSx : rawSy;
+      } else if (handle === 'rc' || handle === 'lc') {
+        s = rawSx;
+      } else {
+        s = rawSy;
+      }
+      s = Math.max(MIN / startBox.w, MIN / startBox.h, s);
+
+      const nw = startBox.w * s;
+      const nh = startBox.h * s;
+      const nx = handle.includes('l') ? startBox.x + startBox.w - nw : startBox.x;
+      const ny = handle.includes('t') ? startBox.y + startBox.h - nh : startBox.y;
 
       for (const id of Object.keys(startNodes)) {
-        const s = startNodes[id];
+        const sn = startNodes[id];
         const node = state.nodes[id];
         if (!node) continue;
-        const relX = (s.x - startBox.x) * sx;
-        const relY = (s.y - startBox.y) * sy;
-        const newW = Math.max(getContentMinDims(node).w, s.width * sx);
-        node.x = nx + relX;
-        node.y = ny + relY;
+        const mins = getMinDims(node.type);
+        const newW = Math.max(mins.w, sn.width * s);
+        const newH = Math.max(mins.h, sn.height * s);
+        node.x = nx + (sn.x - startBox.x) * s;
+        node.y = ny + (sn.y - startBox.y) * s;
         node.width = newW;
+        node.height = newH;
+        node.manualHeight = newH;
         node.element.style.left = node.x + 'px';
         node.element.style.top = node.y + 'px';
         node.element.style.width = node.width + 'px';
-        autoResizeNode(node);
+        node.element.style.height = node.height + 'px';
         updateConnectionsForNode(id);
+      }
+
+      // Scale waypoints of connections fully inside the selection.
+      const { startWaypoints } = state.groupResize;
+      for (const [cid, wps] of Object.entries(startWaypoints)) {
+        const conn = state.connections[cid];
+        if (!conn) continue;
+        conn.waypoints = wps.map(p => ({
+          x: nx + (p.x - startBox.x) * s,
+          y: ny + (p.y - startBox.y) * s
+        }));
       }
 
       if (state.groupBoxEl) {
