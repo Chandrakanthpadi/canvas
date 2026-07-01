@@ -2395,7 +2395,7 @@
       const savedW = el.style.width;
       const savedH = el.style.height;
 
-      el.style.width = 'auto';
+      el.style.width = 'min-content';
       el.style.height = 'auto';
       const contentW = el.offsetWidth;
       const contentH = el.offsetHeight;
@@ -3643,12 +3643,15 @@
       node.element.style.width = w + 'px';
 
       // Top/bottom handles set a manual height the user can grow or shrink.
+      // Width-only resize clears manualHeight so height freely follows content reflow.
       if (resizingH) {
         let y = startY;
         if (handle.includes('t')) y = startY + startHeight - h;
         node.manualHeight = h;
         node.y = y;
         node.element.style.top = y + 'px';
+      } else if (resizingW) {
+        node.manualHeight = null;
       }
 
       autoResizeNode(node);
