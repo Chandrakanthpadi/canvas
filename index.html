@@ -2079,6 +2079,8 @@
       <div class="toolbar-dropdown">
         <button class="toolbar-btn" id="btn-bring-front" title="Bring selected nodes to front">Front</button>
         <button class="toolbar-btn" id="btn-send-back" title="Send selected nodes to back">Back</button>
+        <button class="toolbar-btn" id="btn-align-h" title="Align selected nodes to the same horizontal centre">Align Horizontal</button>
+        <button class="toolbar-btn" id="btn-align-v" title="Align selected nodes to the same vertical centre">Align Vertical</button>
         <button class="toolbar-btn" id="btn-delete">Delete</button>
         <button class="toolbar-btn danger" id="btn-clear">Clear All</button>
       </div>
@@ -2463,6 +2465,8 @@
       document.getElementById('btn-export-svg').addEventListener('click', exportSVG);
       document.getElementById('btn-bring-front').addEventListener('click', () => reorderSelected('front'));
       document.getElementById('btn-send-back').addEventListener('click', () => reorderSelected('back'));
+      document.getElementById('btn-align-h').addEventListener('click', () => alignSelected('h'));
+      document.getElementById('btn-align-v').addEventListener('click', () => alignSelected('v'));
       document.getElementById('btn-fullscreen').addEventListener('click', toggleFullscreen);
       document.addEventListener('fullscreenchange', updateFullscreenButton);
       document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
@@ -6321,6 +6325,60 @@
 
       pushUndo(() => {
         for (const el of prevOrder) canvasNodes.appendChild(el);
+      });
+    }
+
+    function alignSelected(axis) {
+      if (state.selectedNodeIds.size < 2) return;
+      const nodes = [...state.selectedNodeIds].map(id => state.nodes[id]).filter(Boolean);
+      const snapshots = nodes.map(n => ({ id: n.id, x: n.x, y: n.y }));
+
+      if (axis === 'h') {
+        // Align centres to the same Y (horizontal straight line)
+        const avgCY = nodes.reduce((s, n) => s + n.y + n.height / 2, 0) / nodes.length;
+        for (const n of nodes) {
+          n.y = Math.round(avgCY - n.height / 2);
+          n.element.style.top = n.y + 'px';
+          updateConnectionsForNode(n.id);
+        }
+      } else {
+        // Align centres to the same X (vertical straight line)
+        const avgCX = nodes.reduce((s, n) => s + n.x + n.width / 2, 0) / nodes.length;
+        for (const n of nodes) {
+          n.x = Math.round(avgCX - n.width / 2);
+          n.element.style.left = n.x + 'px';
+          updateConnectionsForNode(n.id);
+        }
+      }
+
+      if (state.groupBoxEl) {
+        const bb = getSelectionBBox();
+        if (bb) {
+          state.groupBoxEl.style.left = bb.x + 'px';
+          state.groupBoxEl.style.top = bb.y + 'px';
+          state.groupBoxEl.style.width = bb.w + 'px';
+          state.groupBoxEl.style.height = bb.h + 'px';
+        }
+      }
+
+      pushUndo(() => {
+        for (const s of snapshots) {
+          const n = state.nodes[s.id];
+          if (!n) continue;
+          n.x = s.x; n.y = s.y;
+          n.element.style.left = s.x + 'px';
+          n.element.style.top = s.y + 'px';
+          updateConnectionsForNode(s.id);
+        }
+        if (state.groupBoxEl) {
+          const bb = getSelectionBBox();
+          if (bb) {
+            state.groupBoxEl.style.left = bb.x + 'px';
+            state.groupBoxEl.style.top = bb.y + 'px';
+            state.groupBoxEl.style.width = bb.w + 'px';
+            state.groupBoxEl.style.height = bb.h + 'px';
+          }
+        }
       });
     }
 
