@@ -773,6 +773,12 @@
     .node--process {
       background: #dbeafe;
       border-color: #93c5fd;
+      min-height: 60px;
+    }
+
+    /* Hide empty desc so the label centers on its own; revealed when editing starts */
+    .node--process .node-desc.is-empty {
+      display: none;
     }
 
     .node--text {
@@ -1385,7 +1391,7 @@
       position: absolute;
       width: 20px;
       height: 20px;
-      border-radius: 50%;
+      /* border-radius: 50%; */
       background: var(--accent);
       color: #fff;
       border: none;
@@ -2131,8 +2137,7 @@
         <li><b>Double-click</b> on empty canvas to add a text block.</li>
         <li><b>Ctrl + drag</b> on empty canvas to draw a process block at the size you want.</li>
         <li><b>Ctrl + click</b> drops a default process block.</li>
-        <li>Keyboard: <b>Ctrl + P</b> process, <b>T</b> text, <b>S</b> start, <b>E</b> end, <b>D</b> decision, <b>N</b>
-          note, <b>B</b> database, <b>A</b> API, <b>Q</b> queue (block appears at the cursor).</li>
+        <li>Keyboard: <b>Ctrl + P</b> drops a process block at the cursor.</li>
       </ul>
 
       <h3>Edit a block</h3>
@@ -2398,9 +2403,13 @@
       el.style.width = 'min-content';
       el.style.height = 'auto';
       const contentW = el.offsetWidth;
+
+      // Measure min height at the current (actual) width, not at min-content width.
+      // At min-content width text wraps more, making contentH larger than needed and
+      // blocking the user from resizing the height down to the real content minimum.
+      el.style.width = savedW;
       const contentH = el.offsetHeight;
 
-      el.style.width = savedW;
       el.style.height = savedH;
 
       const base = getMinDims(node.type);
@@ -2958,6 +2967,15 @@
             const descEl = el.querySelector('.node-desc');
             if (descEl && descEl.isContentEditable) return;
             startNotesEdit(el.dataset.nodeId, e.clientX, e.clientY);
+            return;
+          }
+          // Clicking anywhere in the empty body of a process node opens the notes editor
+          // (the empty desc is hidden via CSS so there's no visible click target otherwise).
+          if (!e.target.closest('.node-label') && node.type === 'process') {
+            const descEl = el.querySelector('.node-desc');
+            if (descEl && descEl.classList.contains('is-empty') && !descEl.isContentEditable) {
+              startNotesEdit(el.dataset.nodeId, e.clientX, e.clientY);
+            }
             return;
           }
           // Only enter title edit when clicking directly on the label area.
@@ -5785,8 +5803,7 @@
 
       if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
         const shortcuts = {
-          s: 'start', e: 'end', p: 'process', d: 'decision',
-          n: 'note', b: 'database', a: 'api', q: 'queue', t: 'text'
+          p: 'process'
         };
         const type = shortcuts[e.key.toLowerCase()];
         if (type) {
